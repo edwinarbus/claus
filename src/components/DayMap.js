@@ -161,22 +161,20 @@ export function DayMap({ stop, day, receipt = false }) {
     whenMapSized(map, ({ width }) => {
       if (!mapRef.current) return;
       if (!bounds.length) map.setView([city.lat, city.lng], 12);
-      else if (bounds.length === 1) map.setView(bounds[0], 14);
+      else if (bounds.length === 1) map.setView(bounds[0], receipt ? 15 : 14);
       else {
-        // Receipt: extra padding + a lower zoom cap so every pin AND its label
-        // sit clearly inside the frame (it can't be panned to reveal more).
-        // Labels sit centered BELOW each pin, up to 108px wide (54px either side
-        // of the pin) and ~30px tall — pad well past that on every edge. Fixed,
-        // NOT run through mapFitPadding's phone-width auto-scale: the receipt
-        // card is always ≤302px wide, so that scale would always kick in and
-        // halve these values (which is exactly why labels used to spill past
-        // the frame — the pins fit, but their labels didn't).
+        // Receipt: the map carries NO text labels (they'd stack into an
+        // unreadable wall in an 80mm frame — the plan is listed above it), so we
+        // only need to keep the little pin circles off the edges. A snug, even
+        // pad does that. Crucially we let it zoom IN, not out: a day's pins all
+        // sit in one city center, so a higher zoom pushes them APART in pixels
+        // and de-clutters them — zooming out only crushes them together.
         const pad = receipt
-          ? { paddingTopLeft: [70, 50], paddingBottomRight: [70, 90] }
+          ? { padding: [26, 26] }
           : mapFitPadding(width, [28, 32], [80, 28]);
         // Cap at neighborhood zoom so tightly-clustered pins don't snap to a
         // disorienting street-level close-up.
-        map.fitBounds(L.latLngBounds(bounds), { animate: false, maxZoom: receipt ? 12 : 15, ...pad });
+        map.fitBounds(L.latLngBounds(bounds), { animate: false, maxZoom: 15, ...pad });
       }
       // Reveal only once the view is correct, so the settle is never seen.
       if (reveal) setRevealed(true);
@@ -256,15 +254,13 @@ export function DayMap({ stop, day, receipt = false }) {
     if (!map || !layer) return undefined;
     layer.clearLayers();
     const bounds = [];
-    // Receipt map is a static print: float each label centered UNDERNEATH its
-    // pin (and a notch smaller) so long names don't run off the narrow 80mm
-    // frame. The interactive day map keeps labels to the right of the pin.
-    const labelBase = receipt ? 'scandi-maplabel scandi-maplabel-receipt' : 'scandi-maplabel';
-    const labelDir = receipt ? 'bottom' : 'right';
-    // 'bottom' anchors the label's top at pin-center + offset.y; the 24px pins
-    // reach +12, so +14 clears them with a small gap (lodge pin is 26px → +15).
-    const labelOff = receipt ? [0, 14] : [5, 0];
-    const lodgeOff = receipt ? [0, 15] : [6, 0];
+    // The interactive day map labels every pin (to its right). The receipt map
+    // does NOT: at 80mm the labels stack into an unreadable pile, and the plan
+    // is already listed above the map — so it shows numbered dots + route only.
+    const labelBase = 'scandi-maplabel';
+    const labelDir = 'right';
+    const labelOff = [5, 0];
+    const lodgeOff = [6, 0];
     // Numbered route through the precisely-located spots only, so the
     // getting-around distances below stay trustworthy.
     const routeLatLngs = precise.map((x) => [x.c.lat, x.c.lng]);
@@ -272,9 +268,8 @@ export function DayMap({ stop, day, receipt = false }) {
       L.polyline(routeLatLngs, { color: routeColor(dark), weight: 2.5, opacity: dark ? 0.95 : 0.8, dashArray: '2 7' }).addTo(layer);
     }
     precise.forEach((x, idx) => {
-      L.marker([x.c.lat, x.c.lng], { icon: dayPin(idx + 1, dark) })
-        .addTo(layer)
-        .bindTooltip(shortLabel(x.p.name), { permanent: true, direction: labelDir, offset: labelOff, className: labelBase });
+      const m = L.marker([x.c.lat, x.c.lng], { icon: dayPin(idx + 1, dark) }).addTo(layer);
+      if (!receipt) m.bindTooltip(shortLabel(x.p.name), { permanent: true, direction: labelDir, offset: labelOff, className: labelBase });
       bounds.push([x.c.lat, x.c.lng]);
     });
     // Best-guess pins fan out slightly around the center so they don't stack.
@@ -283,15 +278,13 @@ export function DayMap({ stop, day, receipt = false }) {
       const ang = (idx / approxPts.length) * Math.PI * 2;
       const lat = x.c.lat + Math.cos(ang) * spread;
       const lng = x.c.lng + Math.sin(ang) * spread;
-      L.marker([lat, lng], { icon: approxPin(dark) })
-        .addTo(layer)
-        .bindTooltip(`≈ ${shortLabel(x.p.name)}`, { permanent: true, direction: labelDir, offset: labelOff, className: `${labelBase} scandi-maplabel-approx` });
+      const m = L.marker([lat, lng], { icon: approxPin(dark) }).addTo(layer);
+      if (!receipt) m.bindTooltip(`≈ ${shortLabel(x.p.name)}`, { permanent: true, direction: labelDir, offset: labelOff, className: `${labelBase} scandi-maplabel-approx` });
       bounds.push([lat, lng]);
     });
     if (lodgeLoc) {
-      L.marker([lodgeLoc.c.lat, lodgeLoc.c.lng], { icon: lodgePin(dark) })
-        .addTo(layer)
-        .bindTooltip(`<span style="display:inline-flex;align-items:center;gap:4px;">${bedGlyph('currentColor', 12)}${shortLabel(lodgeLoc.p.name)}</span>`, { permanent: true, direction: labelDir, offset: lodgeOff, className: `${labelBase} scandi-maplabel-lodge` });
+      const m = L.marker([lodgeLoc.c.lat, lodgeLoc.c.lng], { icon: lodgePin(dark) }).addTo(layer);
+      if (!receipt) m.bindTooltip(`<span style="display:inline-flex;align-items:center;gap:4px;">${bedGlyph('currentColor', 12)}${shortLabel(lodgeLoc.p.name)}</span>`, { permanent: true, direction: labelDir, offset: lodgeOff, className: `${labelBase} scandi-maplabel-lodge` });
       bounds.push([lodgeLoc.c.lat, lodgeLoc.c.lng]);
     }
     fitRef.current = bounds;

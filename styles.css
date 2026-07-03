@@ -3984,23 +3984,8 @@ html.dark .scandi-city-name { color: rgba(170, 178, 189, 0.6); text-shadow: none
 }
 .scandi-maplabel-approx { color: #7c828a; font-style: italic; }
 .scandi-maplabel-lodge { color: #8b633e; border-color: #e7dcc3; }
-/* Receipt day-map: labels float centered UNDER their pins, a notch smaller, in
-   plain receipt ink — no leaflet arrow (the pin already anchors them). */
-.leaflet-tooltip.scandi-maplabel-receipt {
-  font-size: 9px;
-  line-height: 1.1;
-  padding: 1px 5px;
-  text-align: center;
-  max-width: 108px;
-  color: #1b1712;
-  background: #fbfaf6;
-  border: 1px solid rgba(23, 20, 15, 0.32);
-  box-shadow: none;
-}
-.scandi-maplabel-receipt.scandi-maplabel-approx { color: #55524c; }
-.scandi-maplabel-receipt.scandi-maplabel-lodge { color: #1b1712; border-color: rgba(23, 20, 15, 0.32); }
-.scandi-maplabel-receipt.leaflet-tooltip-bottom::before,
-.scandi-maplabel-receipt.leaflet-tooltip-top::before { display: none; }
+/* (The receipt day-map carries no labels — just numbered pins + route — so the
+   plan above it stays the single source of names.) */
 /* Trip-map stop names: persistent, a notch larger than the day-map labels,
    sitting above their numbered pins. Past stops gray out with their pins. */
 .leaflet-tooltip.scandi-maplabel-stop {
