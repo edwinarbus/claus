@@ -1,6 +1,6 @@
 import { html, useState, useEffect, useRef } from '../html.js';
 import { useStore } from '../store/store.js';
-import { resolveTripDayContext, previewTripDayContext, findTodayOnTrip, shouldShowTripSplash, markSplashSeen } from '../lib/tripDay.js';
+import { findTodayOnTrip } from '../lib/tripDay.js';
 import { Header } from './Header.js';
 import { ViewToggle, MobileViewToggle } from './ViewToggle.js';
 import { Timeline } from './Timeline.js';
@@ -13,11 +13,8 @@ import { NoticeBar } from './NoticeBar.js';
 import { SyncConflictBar } from './SyncConflictBar.js';
 import { DateChangeConfirmModal } from './DateChangeConfirmModal.js';
 import { SyncStatusBar } from './SyncStatusBar.js';
-import { TripDaySplash } from './TripDaySplash.js';
 import { MobileOnboard, shouldShowMobileOnboard } from './MobileOnboard.js';
 import { DesktopNotificationPrompt, shouldShowDesktopNotificationPrompt } from './DesktopNotificationPrompt.js';
-import { TripChatAnnounce, shouldShowTripChatAnnounce } from './TripChatAnnounce.js';
-import { FeatureAnnounceModal, shouldShowFeatureAnnounce } from './FeatureAnnounceModal.js';
 import { KlausAnnounceModal, shouldShowKlausAnnounce } from './KlausAnnounceModal.js';
 import { isKlausMode, brandName } from '../lib/klausMode.js';
 import { TripEditRecapModal } from './TripEditRecapModal.js';
@@ -32,7 +29,7 @@ const VIEW_ORDER = ['timeline', 'calendar', 'map'];
 const VIEW_PUSH_MS = 480;
 
 export function App() {
-  const { trip, dispatch, notice, dismissNotice, setHideRecs, who, expandStop,
+  const { trip, dispatch, notice, dismissNotice, who, expandStop,
     dateChangePending, confirmDateChange, cancelDateChange, sync, syncReady } = useStore();
   const [view, setView] = useState('timeline');
   const [viewPush, setViewPush] = useState(null);
@@ -40,17 +37,14 @@ export function App() {
   // Claus opens by default on wider screens (floating corner card) — but only
   // AFTER the timeline's entrance cascade plays (see the auto-open effect below),
   // so the itinerary animates in first and the chat then drops in. On a phone
-  // it's a full-screen sheet, so it stays closed on load.
+  // it's a full-screen sheet, so it stays closed on load. The chat's own
+  // briefing receipt is the app's home/welcome screen, so there's no separate
+  // splash to show first.
   const [chatOpen, setChatOpen] = useState(false);
   const chatAutoOpenedRef = useRef(false);
-  const [splashCtx, setSplashCtx] = useState(null);
-  // First-ever open on a phone: a one-time install/notifications card (it takes
-  // the welcome screen's spot for that single open — the splash waits).
+  // First-ever open on a phone: a one-time install/notifications card.
   const [onboarding, setOnboarding] = useState(shouldShowMobileOnboard);
   const [desktopNotifyPrompt, setDesktopNotifyPrompt] = useState(shouldShowDesktopNotificationPrompt);
-  const [chatAnnounce, setChatAnnounce] = useState(false);
-  // One-time redesign/rebrand changelog — shown before every other startup modal.
-  const [featureAnnounce, setFeatureAnnounce] = useState(shouldShowFeatureAnnounce);
   const [editRecap, setEditRecap] = useState(null);
   // One-time "welcome to Germany" gag: fires once the trip reaches Munich.
   const [klausAnnounce, setKlausAnnounce] = useState(false);
@@ -61,24 +55,6 @@ export function App() {
   const recapCheckedForWho = useRef('');
   const viewStageRef = useRef(null);
   const viewPushTimer = useRef(null);
-  // Open the welcome screen at most once per app session (and once per day via
-  // the per-user "seen" flag), so it never re-pops as the trip autosaves/syncs.
-  const splashHandledRef = useRef(false);
-
-  // On a real trip day, greet once per calendar day per person. On localhost,
-  // simulate a showcase trip day so the welcome screen is previewable.
-  useEffect(() => {
-    if (splashHandledRef.current) return;
-    const ctx = resolveTripDayContext(trip);
-    if (!ctx) return;
-    splashHandledRef.current = true;
-    if (shouldShowTripSplash(who, ctx.day.date)) {
-      // A dev-simulated trip day (localhost only) is preview-like: show the
-      // splash for design work, but never persist hideRecs or the "seen" flag —
-      // otherwise a fake trip day leaves a sticky real preference on the device.
-      setSplashCtx(ctx.devSimulated ? { ...ctx, preview: true } : ctx);
-    }
-  }, [trip, who]);
 
   // Once the trip reaches Munich, the app quietly renames itself Claus → Klaus.
   useEffect(() => {
@@ -96,34 +72,30 @@ export function App() {
     if (who) syncPushIdentity(who);
   }, [who]);
 
-  // A tapped notification deep-links to ?welcome=1 → open the welcome screen
-  // for today directly (no once-a-day "seen" gate — the tap is explicit). Two
+  // A tapped notification deep-links to ?welcome=1 → open the chat, whose
+  // briefing receipt IS today's brief (no separate welcome screen anymore). Two
   // entry paths: the URL param when the tap cold-launches the app, and a
   // service-worker message when the app was already open.
   const welcomeLinkHandledRef = useRef(false);
-  function openWelcomeFromNotification() {
-    const ctx = resolveTripDayContext(trip);
-    if (ctx) { setSplashCtx(ctx.devSimulated ? { ...ctx, preview: true } : ctx); return; }
-    // Off-trip (e.g. tapping the preview brief): show day one as a preview.
-    const first = previewTripDayContext(trip);
-    if (first) setSplashCtx({ ...first, preview: true });
+  function openChatFromNotification() {
+    setChatOpen(true);
   }
   useEffect(() => {
     if (welcomeLinkHandledRef.current || !trip?.stops?.length) return;
     const params = new URLSearchParams(window.location.search);
     if (!params.get('welcome')) { welcomeLinkHandledRef.current = true; return; }
     welcomeLinkHandledRef.current = true;
-    // Strip the param so a later reload doesn't re-open the splash.
+    // Strip the param so a later reload doesn't re-open the chat.
     params.delete('welcome');
     const qs = params.toString();
     window.history.replaceState(null, '', `${window.location.pathname}${qs ? `?${qs}` : ''}`);
-    openWelcomeFromNotification();
+    openChatFromNotification();
   }, [trip]);
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return undefined;
     const onMessage = (e) => {
       if (e.data && e.data.type === 'notification-tap' && /[?&]welcome=1/.test(e.data.url || '')) {
-        openWelcomeFromNotification();
+        openChatFromNotification();
       }
     };
     navigator.serviceWorker.addEventListener('message', onMessage);
@@ -179,12 +151,6 @@ export function App() {
     const t = setTimeout(() => setChatOpen(true), reduce ? 200 : 1050);
     return () => clearTimeout(t);
   }, [syncing]);
-
-  useEffect(() => {
-    if (onboarding || desktopNotifyPrompt || chatAnnounce || editRecap) return;
-    if (!postSyncUiReady) return;
-    if (shouldShowTripChatAnnounce(trip)) setChatAnnounce(true);
-  }, [onboarding, desktopNotifyPrompt, chatAnnounce, editRecap, trip, postSyncUiReady]);
 
   // After sync + load overlay, show a concise recap of plan edits since last visit.
   useEffect(() => {
@@ -283,27 +249,6 @@ export function App() {
     </div>`;
   }
 
-  function continueTripDay() {
-    if (!splashCtx) return;
-    const { stop, day, preview } = splashCtx;
-    setSplashCtx(null);
-    // A manual preview just closes — it must not change any trip/view state.
-    if (preview) return;
-    markSplashSeen(who, day.date);
-    setHideRecs(true);
-    changeView('timeline');
-    expandStop(stop.id);
-    scrollToPlanTarget({ stopId: stop.id, date: day.date });
-  }
-
-  function openSplashPreview() {
-    const ctx = previewTripDayContext(trip);
-    if (!ctx) return;
-    setFiltersOpen(false);
-    // Mark as a preview so "Start the day" just closes without changing state.
-    setSplashCtx({ ...ctx, preview: true });
-  }
-
   function openStop(id) {
     changeView('timeline');
     expandStop(id);
@@ -379,19 +324,19 @@ export function App() {
         </main>
       </div>
 
-      <${FilterPanel} open=${filtersOpen} onClose=${() => setFiltersOpen(false)} onPreviewSplash=${openSplashPreview} />
+      <${FilterPanel} open=${filtersOpen} onClose=${() => setFiltersOpen(false)} />
 
       <${TripChatPanel} open=${chatOpen} onClose=${() => setChatOpen(false)} onEnsureTimeline=${() => changeView('timeline')} onEnsureOpen=${() => setChatOpen(true)} />
 
-      ${featureAnnounce && html`<${FeatureAnnounceModal} onDone=${() => setFeatureAnnounce(false)} />`}
-      ${!featureAnnounce && klausAnnounce && html`<${KlausAnnounceModal} onDone=${() => setKlausAnnounce(false)} />`}
-      ${!featureAnnounce && !klausAnnounce && !onboarding && !desktopNotifyPrompt && !editRecap && !chatAnnounce && splashCtx && postSyncUiReady && html`<${TripDaySplash} stop=${splashCtx.stop} day=${splashCtx.day} who=${who} onContinue=${continueTripDay} />`}
-      ${!featureAnnounce && !klausAnnounce && onboarding && html`<${MobileOnboard} who=${who} onDone=${() => setOnboarding(false)} />`}
-      ${!featureAnnounce && !klausAnnounce && !onboarding && desktopNotifyPrompt && html`<${DesktopNotificationPrompt} who=${who} onDone=${() => setDesktopNotifyPrompt(false)} />`}
-      ${!featureAnnounce && !klausAnnounce && !onboarding && !desktopNotifyPrompt && editRecap && html`<${TripEditRecapModal} recap=${editRecap} onDone=${dismissEditRecap} />`}
-      ${!featureAnnounce && !klausAnnounce && !onboarding && !desktopNotifyPrompt && !editRecap && chatAnnounce && html`<${TripChatAnnounce}
-        onDone=${() => setChatAnnounce(false)}
-        onTry=${openChat} />`}
+      <!-- Only the German "Klaus" gag survives as a startup announcement — every
+           other one-time announcement/onboarding-tour modal has been removed
+           now that the chat's briefing receipt is the app's home screen. The
+           mobile install/notifications card and the desktop notification prompt
+           stay: they're functional permission gates, not announcements. -->
+      ${klausAnnounce && html`<${KlausAnnounceModal} onDone=${() => setKlausAnnounce(false)} />`}
+      ${!klausAnnounce && onboarding && html`<${MobileOnboard} who=${who} onDone=${() => setOnboarding(false)} />`}
+      ${!klausAnnounce && !onboarding && desktopNotifyPrompt && html`<${DesktopNotificationPrompt} who=${who} onDone=${() => setDesktopNotifyPrompt(false)} />`}
+      ${!klausAnnounce && !onboarding && !desktopNotifyPrompt && editRecap && html`<${TripEditRecapModal} recap=${editRecap} onDone=${dismissEditRecap} />`}
 
       <${DateChangeConfirmModal}
         pending=${dateChangePending}

@@ -406,7 +406,8 @@ async function composeBrief(stop, day) {
     title: stripSourceLabel(copy.title),
     body: stripSourceLabel(copy.body),
     tag: `scandiplan-brief-${day.date}`,
-    // Tapping the brief deep-links straight to the welcome screen.
+    // Tapping the brief deep-links straight to the chat (its briefing receipt
+    // IS today's brief).
     url: './?welcome=1',
     // The raw news headline (if any), so the cron can mark it as already
     // alerted and the disruption watch won't re-push the same story later.

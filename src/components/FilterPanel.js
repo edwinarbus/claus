@@ -3,7 +3,7 @@ import { useStore, useTrip } from '../store/store.js';
 import { isKlausMode } from '../lib/klausMode.js';
 import { SYNC_LABEL, syncTime } from '../lib/syncStatus.js';
 import { confirmDialog } from '../lib/confirmDialog.js';
-import { IconX, IconSun, IconMoon, IconDisplay, IconReset, IconEyeOff, IconHistory, IconSunrise, IconUndo, IconCheck, IconBell } from './icons.js';
+import { IconX, IconSun, IconMoon, IconDisplay, IconReset, IconEyeOff, IconHistory, IconUndo, IconCheck, IconBell } from './icons.js';
 import { PEOPLE } from '../data/profiles.js';
 import { Avatar } from './Avatar.js';
 import { useTheme } from '../lib/theme.js';
@@ -121,7 +121,7 @@ function formatSnapshotTime(iso) {
   });
 }
 
-export function FilterPanel({ open, onClose, onPreviewSplash }) {
+export function FilterPanel({ open, onClose }) {
   const {
     trip, dispatch, hideRecs, setHideRecs,
     snapshots, snapshotsLoading, loadSnapshots, saveSnapshotNow, restoreSnapshot,
@@ -267,11 +267,6 @@ export function FilterPanel({ open, onClose, onPreviewSplash }) {
           <section class="pt-2 border-t border-stone-100">
             <h3 class="text-[11px] font-semibold text-slate-700 uppercase tracking-wide mb-2">Trip</h3>
             <div class="flex gap-2">
-              ${hasStops && onPreviewSplash && html`<button onClick=${onPreviewSplash}
-                class="flex-1 flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-[2px] text-[13px] font-medium text-slate-700 bg-white hover:text-fjord-700 hover:bg-fjord-50 border-[1.5px] border-[#1a1714] transition">
-                <${IconSunrise} className="w-4 h-4 shrink-0" />
-                <span>Preview welcome</span>
-              </button>`}
               ${hasStops && html`<button onClick=${resetAll}
                 class="flex-1 flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-[2px] text-[13px] font-medium text-slate-700 bg-white hover:text-rose-700 hover:bg-rose-50 border-[1.5px] border-[#1a1714] transition">
                 <${IconReset} className="w-4 h-4 shrink-0" />

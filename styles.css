@@ -2071,32 +2071,6 @@ html.dark .trip-chat-receipt { --paper: #fdfcf7; color: #17140f; box-shadow: 4px
   white-space: nowrap;
 }
 .receipt-body .trip-chat-md-a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
-/* Route strip: the map's monochrome print stand-in — ○──●──●──■ + count. */
-.receipt-route {
-  margin-top: 0.6rem;
-  padding-top: 0.55rem;
-  border-top: 1.5px dashed color-mix(in srgb, var(--r-ink) 55%, transparent);
-  text-align: center;
-}
-.receipt-route-strip { display: flex; align-items: center; justify-content: center; }
-.receipt-route-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--r-ink);
-  flex: 0 0 auto;
-}
-.receipt-route-dot.is-start { background: var(--paper); border: 1.7px solid var(--r-ink); }
-.receipt-route-dot.is-end { border-radius: 1px; }
-.receipt-route-line { width: 20px; height: 1.6px; background: var(--r-ink); flex: 0 0 auto; }
-.receipt-route-label {
-  margin-top: 0.32rem;
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.28em;
-  text-indent: 0.28em;
-  text-transform: uppercase;
-}
 /* Local phrases — a little language card on the brief (also printed to the
    Epson). Dictionary-style rows: local phrase · dotted leader · English gloss. */
 .receipt-phrases {
@@ -2162,8 +2136,6 @@ html.dark .trip-chat-receipt { --paper: #fdfcf7; color: #17140f; box-shadow: 4px
 .receipt-map-canvas .leaflet-container { background: #efece6; cursor: default; }
 .receipt-map-canvas .leaflet-interactive,
 .receipt-map-canvas .leaflet-marker-icon { cursor: default; }
-/* Screen/print visibility toggles. */
-.receipt-print-only { display: none; }
 /* Controls live OUTSIDE the paper (in the chat, not the receipt) so they're
    never cloned into the print — Run again / Print, and the live re-run steps. */
 .receipt-controls { width: min(100%, 302px); margin: 0.55rem auto 0; }
@@ -2227,21 +2199,8 @@ html.dark .trip-chat-receipt { --paper: #fdfcf7; color: #17140f; box-shadow: 4px
   100% { box-shadow: 0 0 0 0 rgba(47, 125, 79, 0); }
 }
 @media (prefers-reduced-motion: reduce) { .receipt-print-dot { animation: none; } }
-/* Footer: CSS barcode + a Danish thank-you, receipt-style. */
+/* Footer: a Danish thank-you, receipt-style. */
 .receipt-foot { margin-top: 0.7rem; }
-.receipt-barcode {
-  height: 30px;
-  width: 78%;
-  margin: 0 auto;
-  background:
-    repeating-linear-gradient(90deg,
-      var(--r-ink) 0 2px, transparent 2px 3.5px,
-      var(--r-ink) 3.5px 4.5px, transparent 4.5px 8px,
-      var(--r-ink) 8px 11px, transparent 11px 12.5px,
-      var(--r-ink) 12.5px 13.5px, transparent 13.5px 17px);
-  -webkit-print-color-adjust: exact;
-  print-color-adjust: exact;
-}
 .receipt-tak {
   margin-top: 0.4rem;
   text-align: center;
@@ -2272,15 +2231,16 @@ html.dark .trip-chat-receipt { --paper: #fdfcf7; color: #17140f; box-shadow: 4px
     --paper: #fff;
     font-size: 12px;
   }
-  /* The interactive/screen bits never print: the day map (mush on thermal — the
-     route strip is its stand-in), the paper tear, and any screen-only chrome. */
+  /* The interactive/screen bits never print: the day map (mush on thermal —
+     it's not what's on the shelf-life receipt), the paper tear, and any
+     screen-only chrome. */
   html.receipt-printing #receipt-print-root .receipt-screen-only,
   html.receipt-printing #receipt-print-root .receipt-map,
   html.receipt-printing #receipt-print-root .receipt-tear { display: none !important; }
-  html.receipt-printing #receipt-print-root .receipt-print-only { display: block !important; }
 }
-/* NOTE: the 80mm @page rule is injected by printBriefing() only for the
-   receipt print, so normal browser printing of the app is untouched. */
+/* NOTE: the 80mm @page rule (sized to the measured content) is injected by
+   printBriefing() only for the receipt print, so normal browser printing of
+   the app is untouched. */
 /* "New chat" pill — a quiet accent chip so it reads as a button, not floating text. */
 .trip-chat-new {
   color: var(--accent-deep, #4a5f42);
@@ -2757,17 +2717,6 @@ html.dark .block-spinner { --block-spinner-ghost: rgba(186, 201, 235, 0.14); }
   .trip-chat-input { font-size: var(--trip-chat-text); }
 }
 .trip-chat-input::-webkit-scrollbar { display: none; width: 0; height: 0; }
-
-.trip-chat-announce-target {
-  background: rgba(255, 255, 255, 0.9);
-  border: 1.5px solid color-mix(in srgb, var(--accent, #5f7a54) 45%, #d6cfbe);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent, #5f7a54) 14%, transparent);
-}
-html.dark .trip-chat-announce-target {
-  background: rgba(36, 33, 29, 0.9);
-  border-color: rgba(156, 184, 141, 0.45);
-  box-shadow: 0 0 0 3px rgba(156, 184, 141, 0.12);
-}
 
 .trip-chat-send {
   width: var(--trip-chat-pill-h);
@@ -4108,11 +4057,12 @@ html.dark .scandi-city-name { color: rgba(170, 178, 189, 0.6); text-shadow: none
   -webkit-overflow-scrolling: touch;
 }
 
-/* ---- Welcome (trip-day) modal — welcome-specific glass --------------------- */
-/* Owned by the welcome screen. Reuses the shared .gg-rim specular hairline but
-   overrides the fill/refraction so the live Timeline stays clearly visible and
-   refracts through both the scrim and the panel. Does NOT touch shared
-   .gg-glass/.gg-menu/.gg-sheet/.glass-* utilities. */
+/* ---- One-time startup modals — shared "welcome" glass panel ---------------- */
+/* Shared by every one-time startup modal (Klaus gag, mobile onboarding, desktop
+   notification prompt, edit recap, tickets, etc). Reuses the shared .gg-rim
+   specular hairline but overrides the fill/refraction so the live Timeline
+   stays clearly visible and refracts through both the scrim and the panel.
+   Does NOT touch shared .gg-glass/.gg-menu/.gg-sheet/.glass-* utilities. */
 
 /* Transparent scrim: the Timeline behind stays fully clear and undimmed — no
    blur, no darkening. Only the centered glass panel refracts the view. */

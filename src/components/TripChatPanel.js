@@ -17,7 +17,6 @@ import { BlockSpinner } from './BlockSpinner.js';
 import { ActivitySection } from './TripChatActivity.js';
 import { DayMap } from './DayMap.js';
 import { findDayOnTrip } from '../lib/tripDay.js';
-import { collectActivityItems } from '../lib/dayRoute.js';
 import { daysBetween } from '../lib/dates.js';
 import { resolveItemCoords } from './useDayGeo.js';
 import { renderReceiptCanvas } from '../lib/thermalReceipt.js';
@@ -180,13 +179,28 @@ function printBriefing() {
   document.getElementById('receipt-print-root')?.remove();
   const root = document.createElement('div');
   root.id = 'receipt-print-root';
-  root.appendChild(paper.cloneNode(true));
+  const clone = paper.cloneNode(true);
+  root.appendChild(clone);
   document.body.appendChild(root);
-  // 80mm roll @page, injected only for this print so normal app printing
-  // (Cmd+P elsewhere) keeps the default page size.
+
+  // Measure the clone at its real print width (briefly, off-screen) so the
+  // @page height can be set to the actual content height. A "size: 80mm auto"
+  // height isn't reliably honored by browsers/PDF export — many fall back to a
+  // default Letter/A4 page with the narrow receipt stranded in a corner. An
+  // explicit computed mm height fixes that everywhere print-to-PDF is used.
+  root.style.cssText = 'position:fixed; left:-9999px; top:0; display:block;';
+  clone.style.cssText = 'width:72mm; margin:0; padding:0 1mm; border:none; box-shadow:none; font-size:12px;';
+  clone.querySelectorAll('.receipt-screen-only, .receipt-map, .receipt-tear').forEach((el) => { el.style.display = 'none'; });
+  const heightPx = clone.getBoundingClientRect().height;
+  const heightMM = Math.max(80, Math.ceil((heightPx / 96) * 25.4) + 12);
+  root.removeAttribute('style');
+  clone.removeAttribute('style');
+
+  // 80mm roll @page, sized to the measured content — injected only for this
+  // print so normal app printing (Cmd+P elsewhere) keeps the default page size.
   const pageStyle = document.createElement('style');
   pageStyle.id = 'receipt-page-style';
-  pageStyle.textContent = '@page { size: 80mm auto; margin: 3mm; }';
+  pageStyle.textContent = `@page { size: 80mm ${heightMM}mm; margin: 3mm; }`;
   document.head.appendChild(pageStyle);
   document.documentElement.classList.add('receipt-printing');
   const cleanup = () => {
@@ -1598,10 +1612,8 @@ export function TripChatPanel({ open, onClose, onEnsureTimeline, onEnsureOpen })
               const rowA = titles.filter((_, j) => j % 2 === 0);
               const rowB = titles.filter((_, j) => j % 2 === 1);
               // The report's day (resolved from the brief's date) drives the
-              // day-plan mini-map — the same one used in the day plan — and the
-              // printable route-strip glyph (the map's monochrome stand-in).
+              // day-plan mini-map — the same one used in the day plan.
               const briefDay = m.conciergeDate ? findDayOnTrip(trip, m.conciergeDate) : null;
-              const briefStops = briefDay ? collectActivityItems(briefDay.day).length : 0;
               const printLabel = printStatus === 'printing' ? 'Printing…'
                 : printStatus === 'done' ? 'Sent to Epson ✓'
                   : printerReady ? 'Print to Epson' : 'Print receipt';
@@ -1631,20 +1643,8 @@ export function TripChatPanel({ open, onClose, onEnsureTimeline, onEnsureOpen })
                             <span class="receipt-phrase-en">${en}</span>
                           </div>`)}
                       </div>` : null}
-                    ${!typing && briefStops > 1 ? html`
-                      <div class="receipt-route receipt-print-only" aria-hidden="true">
-                        <div class="receipt-route-strip">
-                          ${Array.from({ length: briefStops }, (_, k) => html`
-                            <${Fragment} key=${k}>
-                              <span class=${`receipt-route-dot ${k === 0 ? 'is-start' : ''} ${k === briefStops - 1 ? 'is-end' : ''}`}></span>
-                              ${k < briefStops - 1 ? html`<span class="receipt-route-line"></span>` : null}
-                            </${Fragment}>`)}
-                        </div>
-                        <div class="receipt-route-label">${briefStops} stops today</div>
-                      </div>` : null}
                     ${!typing ? html`
                       <div class="receipt-foot" aria-hidden="true">
-                        <div class="receipt-barcode"></div>
                         <div class="receipt-tak">· TAK ·</div>
                       </div>` : null}
                     <div class="receipt-tear" aria-hidden="true"></div>
