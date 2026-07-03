@@ -7,7 +7,7 @@ import {
 } from './icons.js';
 import { WeatherGlyph } from './WeatherGlyph.js';
 import {
-  greetingForNow, buildDayOverview, periodWeather, wearAdvice, plannedSightNames,
+  greetingForNow, buildDayOverview, periodWeather, wearAdvice, plannedSightNames, daySummary,
 } from '../lib/tripDay.js';
 
 // Alert-kind glyph keys → icon components.
@@ -175,12 +175,11 @@ export function TripDaySplash({ stop, day, who, onContinue }) {
           <p class="uppercase tracking-wide text-[11px] font-semibold text-slate-500 mt-2">Day ${overview.dayNumber} · ${overview.dateLabel} · ${overview.city}</p>
         </div>
 
-        <!-- Claude-written summary only — no client template -->
+        <!-- Claude-written summary when available; otherwise a warm local one
+             built from the day's plan + weather (never a bare error line). -->
         ${summaryLoading
           ? html`<p class="text-center text-[14px] leading-relaxed text-slate-400 animate-pulse min-h-[3.25rem]">Writing today's brief…</p>`
-          : aiSummary
-            ? html`<p class="text-center text-[14px] leading-relaxed text-slate-700">${aiSummary}</p>`
-            : html`<p class="text-center text-[14px] leading-relaxed text-slate-500 min-h-[3.25rem]">Couldn't load today's brief.</p>`}
+          : html`<p class="text-center text-[14px] leading-relaxed text-slate-700">${aiSummary || daySummary(stop, day, wx)}</p>`}
 
         <!-- Live local conditions -->
         <${LocalConditions} city=${overview.city} dateISO=${day.date} weather=${wx}
