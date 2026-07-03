@@ -1,0 +1,61 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/trip-chat.js": { "maxDuration": 300 },
+    "api/trip-chat-agent.js": { "maxDuration": 60 }
+  },
+  "headers": [
+    {
+      "source": "/",
+      "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+    },
+    {
+      "source": "/styles.css",
+      "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+    },
+    {
+      "source": "/manifest.json",
+      "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+    },
+    {
+      "source": "/(.*)\\.html",
+      "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+    },
+    {
+      "source": "/src/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+    },
+    {
+      "source": "/sw.js",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache" },
+        { "key": "Service-Worker-Allowed", "value": "/" }
+      ]
+    },
+    {
+      "source": "/api/trip-chat",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, no-transform" },
+        { "key": "X-Accel-Buffering", "value": "no" }
+      ]
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/morning-brief",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/morning-brief",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/morning-prefetch",
+      "schedule": "55 3 * * *"
+    },
+    {
+      "path": "/api/morning-prefetch",
+      "schedule": "55 4 * * *"
+    }
+  ]
+}

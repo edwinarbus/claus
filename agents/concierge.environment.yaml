@@ -1,0 +1,11 @@
+# Cloud environment for the Overnight Concierge — an Anthropic-hosted container
+# per session where the agent's tools (bash, file ops, web search/fetch) run.
+# Unrestricted egress so web_search / web_fetch can reach the open web.
+#
+#   ant beta:environments create < agents/concierge.environment.yaml
+
+name: scandiplan-concierge
+config:
+  type: cloud
+  networking:
+    type: unrestricted

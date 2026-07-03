@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en" style="background-color:#f4f3ee">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <!-- Statically LIGHT chrome metas — the known-good iOS configuration. The
+       boot script below swaps them to dark synchronously (pre-paint) when the
+       resolved theme is dark. Declaring "light dark" here instead made iOS
+       Safari paint the title-bar region with the dark UA canvas (black) when
+       the SYSTEM was dark, before the page's own colors won out. -->
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
+  <meta name="theme-color" content="#f4f3ee" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <!-- Always "default": modern iOS standalone reads the status-bar region's
+       color from the page background (which the theme flips), while "black" /
+       "black-translucent" paint a solid black band regardless of theme. -->
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Claus" />
+  <!-- Theme boot: resolve the saved preference (default = follow the OS) and
+       apply the `dark` class + chrome colors BEFORE first paint, so there's no
+       light flash on a dark device. Sits after the metas above so it can swap
+       them synchronously (head scripts block rendering). Light needs no work —
+       the static markup IS the light configuration. The full controller lives
+       in src/lib/theme.js. -->
+  <script>
+    (function () {
+      try {
+        var pref = localStorage.getItem('scandiplan.theme') || 'system';
+        var dark = pref === 'dark' || (pref === 'system' &&
+          window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        if (!dark) return;
+        var root = document.documentElement;
+        root.classList.add('dark');
+        root.style.colorScheme = 'dark';
+        root.style.backgroundColor = '#000000';
+        var set = function (name, content) {
+          var m = document.querySelector('meta[name="' + name + '"]');
+          if (m) m.setAttribute('content', content);
+        };
+        set('color-scheme', 'dark');
+        set('supported-color-schemes', 'dark');
+        set('theme-color', '#000000');
+      } catch (e) { /* no storage / older browser — stays light */ }
+    })();
+  </script>
+  <!-- The manifest is what modern iOS standalone mode actually reads for the
+       status-bar region's color — without it the bar can render black even
+       with theme-color set. -->
+  <link rel="manifest" href="./manifest.json" />
+  <title>Claus — Scandinavia Trip Planner</title>
+  <link rel="icon" href="./favicon.ico" sizes="16x16 32x32 48x48" />
+  <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="./favicon-16x16.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="./favicon.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png" />
+  <link rel="preconnect" href="https://esm.sh" />
+  <link rel="preconnect" href="https://api.open-meteo.com" />
+  <link rel="preconnect" href="https://archive-api.open-meteo.com" />
+  <!-- Archivo — a bold grotesque for the editorial/poster layer (oversized
+       titles, city names, numbered sections). Outfit stays the UI/body face. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&display=swap" />
+  <!-- Editorial display face: Fraunces — a characterful, print-flavored serif
+       (soft terminals + a touch of WONK) for the wordmark and oversized titles.
+       Archivo stays as the fallback if it's slow to arrive. -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,400..900,0..100,0..1&display=swap" />
+
+  <!-- Tailwind (runtime CDN — perfect for a local-first personal app) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      // Dark mode is driven by a `dark` class on <html> (set by the inline boot
+      // script + src/lib/theme.js) rather than the media query, so an explicit
+      // Light/Dark choice in Settings overrides the OS preference.
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Outfit', 'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
+            display: ['Fraunces', 'Archivo', 'ui-serif', 'Georgia', 'serif'],
+            // Editorial display serif — a print-flavored voice for oversized
+            // titles, city names, and numbered section headers.
+            editorial: ['Fraunces', 'Archivo', 'ui-serif', 'Georgia', 'serif'],
+          },
+          // Every palette step is backed by a CSS variable (an "R G B" triplet)
+          // defined in styles.css. Light values live in :root; html.dark swaps
+          // them. This makes ~700 existing bg-/text-/border- utilities flip to
+          // the dark theme with no per-component edits. <alpha-value> keeps
+          // opacity modifiers (text-slate-700/60 etc.) working.
+          colors: {
+            fjord: {
+              50:  'rgb(var(--c-fjord-50) / <alpha-value>)',  100: 'rgb(var(--c-fjord-100) / <alpha-value>)',
+              200: 'rgb(var(--c-fjord-200) / <alpha-value>)', 300: 'rgb(var(--c-fjord-300) / <alpha-value>)',
+              400: 'rgb(var(--c-fjord-400) / <alpha-value>)', 500: 'rgb(var(--c-fjord-500) / <alpha-value>)',
+              600: 'rgb(var(--c-fjord-600) / <alpha-value>)', 700: 'rgb(var(--c-fjord-700) / <alpha-value>)',
+              800: 'rgb(var(--c-fjord-800) / <alpha-value>)', 900: 'rgb(var(--c-fjord-900) / <alpha-value>)',
+              950: 'rgb(var(--c-fjord-950) / <alpha-value>)',
+            },
+            stone: {
+              50:  'rgb(var(--c-stone-50) / <alpha-value>)',  100: 'rgb(var(--c-stone-100) / <alpha-value>)',
+              200: 'rgb(var(--c-stone-200) / <alpha-value>)', 300: 'rgb(var(--c-stone-300) / <alpha-value>)',
+              400: 'rgb(var(--c-stone-400) / <alpha-value>)', 500: 'rgb(var(--c-stone-500) / <alpha-value>)',
+              600: 'rgb(var(--c-stone-600) / <alpha-value>)', 700: 'rgb(var(--c-stone-700) / <alpha-value>)',
+              800: 'rgb(var(--c-stone-800) / <alpha-value>)', 900: 'rgb(var(--c-stone-900) / <alpha-value>)',
+              950: 'rgb(var(--c-stone-950) / <alpha-value>)',
+            },
+            slate: {
+              50:  'rgb(var(--c-slate-50) / <alpha-value>)',  100: 'rgb(var(--c-slate-100) / <alpha-value>)',
+              200: 'rgb(var(--c-slate-200) / <alpha-value>)', 300: 'rgb(var(--c-slate-300) / <alpha-value>)',
+              400: 'rgb(var(--c-slate-400) / <alpha-value>)', 500: 'rgb(var(--c-slate-500) / <alpha-value>)',
+              600: 'rgb(var(--c-slate-600) / <alpha-value>)', 700: 'rgb(var(--c-slate-700) / <alpha-value>)',
+              800: 'rgb(var(--c-slate-800) / <alpha-value>)', 900: 'rgb(var(--c-slate-900) / <alpha-value>)',
+              950: 'rgb(var(--c-slate-950) / <alpha-value>)',
+            },
+            sand: {
+              50:  'rgb(var(--c-sand-50) / <alpha-value>)',  100: 'rgb(var(--c-sand-100) / <alpha-value>)',
+              200: 'rgb(var(--c-sand-200) / <alpha-value>)', 300: 'rgb(var(--c-sand-300) / <alpha-value>)',
+              400: 'rgb(var(--c-sand-400) / <alpha-value>)', 500: 'rgb(var(--c-sand-500) / <alpha-value>)',
+              600: 'rgb(var(--c-sand-600) / <alpha-value>)', 700: 'rgb(var(--c-sand-700) / <alpha-value>)',
+              800: 'rgb(var(--c-sand-800) / <alpha-value>)', 900: 'rgb(var(--c-sand-900) / <alpha-value>)',
+            },
+          },
+          boxShadow: {
+            // Editorial: cards rely on crisp black borders, not soft glows.
+            // Floating elements get a clean, contained drop shadow.
+            soft: '0 1px 0 0 rgba(20,18,15,0.04)',
+            lift: '0 10px 24px -12px rgba(20,18,15,0.28)',
+            drag: '0 18px 40px -12px rgba(20,18,15,0.38)',
+          },
+          keyframes: {
+            'fade-in': { '0%': { opacity: 0, transform: 'translateY(4px)' }, '100%': { opacity: 1, transform: 'translateY(0)' } },
+            'pop-in':  { '0%': { opacity: 0, transform: 'scale(0.97)' }, '100%': { opacity: 1, transform: 'scale(1)' } },
+            'rise-in': { '0%': { opacity: 0, transform: 'translateY(10px)' }, '100%': { opacity: 1, transform: 'translateY(0)' } },
+            'slide-down': { '0%': { opacity: 0, transform: 'translateY(-6px)' }, '100%': { opacity: 1, transform: 'translateY(0)' } },
+            'pop-bounce': { '0%': { opacity: 0, transform: 'scale(0.94)' }, '60%': { opacity: 1, transform: 'scale(1.015)' }, '100%': { transform: 'scale(1)' } },
+            // Directional view transitions (timeline ⇆ calendar ⇆ map). Subtle
+            // GPU-only slide + fade so switching feels like a native tab swap.
+            'view-in-left':  { '0%': { opacity: 0, transform: 'translate3d(-7%,0,0)' }, '100%': { opacity: 1, transform: 'translate3d(0,0,0)' } },
+            'view-in-right': { '0%': { opacity: 0, transform: 'translate3d(7%,0,0)' },  '100%': { opacity: 1, transform: 'translate3d(0,0,0)' } },
+          },
+          animation: {
+            'fade-in': 'fade-in 0.2s cubic-bezier(0.22,1,0.36,1) both',
+            'pop-in':  'pop-in 0.16s cubic-bezier(0.22,1,0.36,1) both',
+            'rise-in': 'rise-in 0.42s cubic-bezier(0.22,1,0.36,1) both',
+            'slide-down': 'slide-down 0.22s cubic-bezier(0.22,1,0.36,1) both',
+            'pop-bounce': 'pop-bounce 0.26s cubic-bezier(0.34,1.56,0.64,1) both',
+            // iOS-style decel curve (matches --ease-ios in styles.css).
+            'view-in-left':  'view-in-left 0.4s cubic-bezier(0.32,0.72,0,1) both',
+            'view-in-right': 'view-in-right 0.4s cubic-bezier(0.32,0.72,0,1) both',
+          },
+        },
+      },
+    };
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="preconnect" href="https://en.wikipedia.org" />
+  <link rel="preconnect" href="https://basemaps.cartocdn.com" />
+
+  <!-- Leaflet (real map tiles with land + coastlines) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
+  <link rel="stylesheet" href="./styles.css" />
+
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.3.1",
+      "react-dom": "https://esm.sh/react-dom@18.3.1",
+      "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+      "htm": "https://esm.sh/htm@3.1.1",
+      "leaflet": "https://esm.sh/leaflet@1.9.4"
+    }
+  }
+  </script>
+</head>
+<body class="bg-stone-50 text-slate-800 font-sans antialiased">
+  <div id="root">
+    <!-- First-paint loader: shows the spinner on the page background immediately,
+         before the JS modules finish loading and React mounts — so there's no
+         blank "dotted background" gap. React replaces this on mount. -->
+    <div class="boot-loader" aria-hidden="true"><span class="block-spinner block-spinner--lg sync-load-spinner"><span class="block-spinner-pixel"></span><span class="block-spinner-pixel"></span><span class="block-spinner-pixel"></span><span class="block-spinner-pixel"></span><span class="block-spinner-pixel"></span><span class="block-spinner-pixel"></span><span class="block-spinner-pixel"></span><span class="block-spinner-pixel"></span><span class="block-spinner-pixel"></span></span></div>
+  </div>
+  <noscript>Claus needs JavaScript enabled.</noscript>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

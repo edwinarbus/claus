@@ -1,0 +1,16 @@
+# Scandiplan is a no-build static site (plain ES modules over CDN). Netlify just
+# serves the repo root as-is. Deploy: connect this repo, or run `netlify deploy`.
+[build]
+  publish = "."
+  command = ""
+
+# Long-cache the libraries/assets but never the HTML/JS source (so edits show up).
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/src/*"
+  [headers.values]
+    Cache-Control = "no-cache"

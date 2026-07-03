@@ -1,0 +1,14 @@
+{
+  "name": "Claus — Scandinavia Trip Planner",
+  "short_name": "Claus",
+  "description": "Tyler & Edwin's shared three-week Scandinavia trip planner.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#f3efe4",
+  "theme_color": "#f3efe4",
+  "icons": [
+    { "src": "./apple-touch-icon.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "./favicon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
