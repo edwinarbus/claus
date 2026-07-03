@@ -1961,24 +1961,85 @@ html.dark[data-merged-stop-head] .stop-sticky-head.is-merged.is-stuck::before {
   print-color-adjust: exact;
 }
 html.dark .trip-chat-receipt { --paper: #fdfcf7; color: #17140f; box-shadow: 4px 4px 0 0 rgba(255, 255, 255, 0.5); }
-/* "Prints out from the top": on load the receipt feeds down out of a slot,
-   revealed top→bottom as the report types itself in — a thermal-printer feel.
+/* "Prints out of the slot": on load the receipt feeds down as if off a thermal
+   head — revealed top→bottom, the paper tipped forward (curling out of the roll)
+   and easing flat as it fully emerges, with a soft print-head shadow tracking
+   the reveal edge and the leading edge settling into a slight resting curl.
+   A short delay lets the printer "warm up" before the paper starts to feed.
    Runs once when the card mounts; typewriter re-renders don't restart it. */
 .trip-chat-receipt.receipt-print-in {
-  animation: receipt-print-in 1100ms cubic-bezier(0.22, 0.68, 0.28, 1) both;
+  animation: receipt-print-in 2300ms cubic-bezier(0.22, 0.61, 0.2, 1) 560ms both;
+  transform-origin: top center;
+  will-change: clip-path, transform;
 }
 @keyframes receipt-print-in {
-  0%   { clip-path: inset(0 0 100% 0); transform: translateY(-5px); }
-  100% { clip-path: inset(0 -12px -12px 0); transform: none; }
+  0%   { clip-path: inset(0 0 100% 0); transform: perspective(1600px) rotateX(-11deg) translateY(-7px); }
+  60%  { transform: perspective(1600px) rotateX(3deg) translateY(0); }
+  82%  { transform: perspective(1600px) rotateX(-1.2deg) translateY(0); }
+  100% { clip-path: inset(0 -12px -12px 0); transform: perspective(1600px) rotateX(0) translateY(0); }
+}
+/* The print head's soft shadow, riding just behind the reveal edge as it feeds
+   down. Its dark lower lip tracks the boundary; the body sits on the freshly
+   emerged paper above it. Same timing/easing as the reveal so they stay locked. */
+.trip-chat-receipt.receipt-print-in::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  top: -30px;
+  height: 30px;
+  z-index: 3;
+  pointer-events: none;
+  background: linear-gradient(to bottom,
+    transparent 0%,
+    color-mix(in srgb, var(--r-ink) 3%, transparent) 40%,
+    color-mix(in srgb, var(--r-ink) 10%, transparent) 74%,
+    color-mix(in srgb, var(--r-ink) 20%, transparent) 100%);
+  animation: receipt-printhead 2300ms cubic-bezier(0.22, 0.61, 0.2, 1) 560ms both;
+}
+@keyframes receipt-printhead {
+  0%   { top: -30px; opacity: 0; }
+  7%   { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { top: calc(100% - 0px); opacity: 0; }
+}
+/* The leading (bottom) edge curls forward off the paper as it comes to rest — a
+   thin underside shadow band that fades in once the sheet has fully fed out. */
+.trip-chat-receipt.receipt-print-in::after {
+  content: '';
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  bottom: 0;
+  height: 20px;
+  z-index: 2;
+  pointer-events: none;
+  border-radius: 0 0 3px 3px;
+  background: linear-gradient(to bottom,
+    transparent 0%,
+    rgba(255, 255, 255, 0.35) 46%,
+    color-mix(in srgb, var(--r-ink) 13%, transparent) 100%);
+  opacity: 0;
+  animation: receipt-curl 900ms ease-out 2760ms both;
+}
+@keyframes receipt-curl {
+  0%   { opacity: 0; transform: translateY(-3px) scaleY(0.6); transform-origin: bottom; }
+  100% { opacity: 1; transform: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .trip-chat-receipt.receipt-print-in { animation: none; }
+  .trip-chat-receipt.receipt-print-in::before { display: none; }
+  .trip-chat-receipt.receipt-print-in::after { animation: none; opacity: 1; }
 }
-/* The print clone is a static snapshot — never animate or clip it. */
+/* The print clone is a static snapshot — never animate, clip, or curl it. */
 #receipt-print-root .trip-chat-receipt.receipt-print-in {
   animation: none !important;
   clip-path: none !important;
   transform: none !important;
+}
+#receipt-print-root .trip-chat-receipt.receipt-print-in::before,
+#receipt-print-root .trip-chat-receipt.receipt-print-in::after {
+  display: none !important;
 }
 /* Torn bottom edge: a strip of paper-colored teeth pointing down. */
 .receipt-tear {
