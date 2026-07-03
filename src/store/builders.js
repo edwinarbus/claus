@@ -162,7 +162,9 @@ export function buildDaysForCity(cityId, startISO, endISO, prevDays = []) {
   return kept.map((d, i) => (i < firstNew ? d : { ...d, slots: plans[i] || emptySlots() }));
 }
 
-export const STORAGE_KEY = 'claus-demo:v2';
+// Demo: bumped to v3 so an already-seeded browser (older date, no hotels)
+// re-seeds fresh — tomorrow start + the real booked hotels.
+export const STORAGE_KEY = 'claus-demo:v3';
 export const SCHEMA_VERSION = 15;
 
 // Turn a catalog item (or any item-shaped object) into a fresh placeable instance.

@@ -13,6 +13,7 @@ import {
   flushRemoteTrip, saveTripSnapshot, listTripSnapshots, fetchTripSnapshot,
 } from './sync.js';
 import { slotAssignmentAdvice, stopMoveAdvice } from '../data/planAdvice.js';
+import { DEMO_HOTELS } from '../data/demoHotels.js';
 import { todayISO, daysBetween, addDays } from '../lib/dates.js';
 import { summarizeTripEdit, composePlanEditNotification, editSummaryKey } from '../lib/editSummary.js';
 import { diffPlanChanges } from '../lib/planChangeDiff.js';
@@ -121,6 +122,32 @@ function stripRetiredItems(trip) {
     })),
   }));
   return trip;
+}
+
+// DEMO: book a real hotel (src/data/demoHotels.js) into every night of each
+// stop, so the seeded itinerary shows real, recognizable stays.
+function withDemoHotels(trip) {
+  return {
+    ...trip,
+    stops: trip.stops.map((stop) => {
+      const h = DEMO_HOTELS[stop.cityId || stop.id];
+      if (!h) return stop;
+      return {
+        ...stop,
+        days: (stop.days || []).map((day, i) => ({
+          ...day,
+          slots: {
+            ...day.slots,
+            lodging: {
+              id: `demo-lodging-${stop.cityId || stop.id}-${i}`,
+              name: h.name, type: 'lodging', tier: 1, custom: true,
+              lat: h.lat, lng: h.lng, address: h.address,
+            },
+          },
+        })),
+      };
+    }),
+  };
 }
 
 export function migrate(parsed) {
@@ -253,7 +280,7 @@ export function TripProvider({ children }) {
     // DEMO: no saved trip yet → seed the curated route starting TOMORROW, so a
     // fresh browser opens straight into a full itinerary (no backend, no empty
     // state). Reuses the exact "Load default route" reducer path.
-    return reducer(initialTrip(), { type: 'LOAD_DEFAULT_ROUTE', startDate: addDays(todayISO(), 1) });
+    return withDemoHotels(reducer(initialTrip(), { type: 'LOAD_DEFAULT_ROUTE', startDate: addDays(todayISO(), 1) }));
   });
   const tripRef = useRef(trip);
   tripRef.current = trip;
