@@ -165,14 +165,18 @@ export function DayMap({ stop, day, receipt = false }) {
       else {
         // Receipt: extra padding + a lower zoom cap so every pin AND its label
         // sit clearly inside the frame (it can't be panned to reveal more).
-        // Labels sit centered BELOW each pin here, so keep symmetric side room
-        // (they spread left+right) and extra room at the bottom for the lowest.
+        // Labels sit centered BELOW each pin, up to 108px wide (54px either side
+        // of the pin) and ~30px tall — pad well past that on every edge. Fixed,
+        // NOT run through mapFitPadding's phone-width auto-scale: the receipt
+        // card is always ≤302px wide, so that scale would always kick in and
+        // halve these values (which is exactly why labels used to spill past
+        // the frame — the pins fit, but their labels didn't).
         const pad = receipt
-          ? mapFitPadding(width, [50, 42], [50, 58])
+          ? { paddingTopLeft: [70, 50], paddingBottomRight: [70, 90] }
           : mapFitPadding(width, [28, 32], [80, 28]);
         // Cap at neighborhood zoom so tightly-clustered pins don't snap to a
         // disorienting street-level close-up.
-        map.fitBounds(L.latLngBounds(bounds), { animate: false, maxZoom: receipt ? 13 : 15, ...pad });
+        map.fitBounds(L.latLngBounds(bounds), { animate: false, maxZoom: receipt ? 12 : 15, ...pad });
       }
       // Reveal only once the view is correct, so the settle is never seen.
       if (reveal) setRevealed(true);
