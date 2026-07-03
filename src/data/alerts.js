@@ -10,7 +10,7 @@
 // city+day. When the proxy returns nothing or fails (e.g. local dev with no
 // serverless layer), the caller falls back to the reliable weather signal.
 
-const CACHE_KEY = 'scandiplan:alerts:v1';
+const CACHE_KEY = 'claus-demo:alerts:v1';
 const TTL_MS = 6 * 60 * 60 * 1000; // success: re-check at most every 6 hours
 const ERROR_TTL_MS = 10 * 60 * 1000; // failure: brief cooldown before retrying
 

@@ -12,7 +12,7 @@
 import { useState, useEffect } from '../html.js';
 import { haversineKm } from '../data/logistics.js';
 
-const GEO_KEY = 'scandiplan:geo:v3';
+const GEO_KEY = 'claus-demo:geo:v3';
 const CC = { Denmark: 'dk', Sweden: 'se', Norway: 'no', Finland: 'fi', Estonia: 'ee' };
 
 let mem = null;

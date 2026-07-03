@@ -7,7 +7,7 @@ import { isKlausMode, brandName } from '../lib/klausMode.js';
 // One-time "new feature" card for Claus — same bold editorial modal
 // language as mobile onboarding and the desktop notification prompt.
 
-const SEEN_KEY = 'scandiplan:tripChatAnnounceSeen:v2';
+const SEEN_KEY = 'claus-demo:tripChatAnnounceSeen:v2';
 
 export function shouldShowTripChatAnnounce(trip) {
   try {

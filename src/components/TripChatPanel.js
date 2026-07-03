@@ -30,10 +30,10 @@ import { IconX, IconSend, IconGlobe, IconPaperclip, IconPlus, IconCheck, IconChe
 import { isKlausMode } from '../lib/klausMode.js';
 
 const INPUT_MAX_PX = 112;
-const CONCIERGE_SEEN_KEY = 'scandiplan:conciergeSeenAt';
-const WIDTH_KEY = 'scandiplan:tripChatWidth:v1';
-const HEIGHT_KEY = 'scandiplan:tripChatHeight:v1';
-const POS_KEY = 'scandiplan:tripChatPos:v1';
+const CONCIERGE_SEEN_KEY = 'claus-demo:conciergeSeenAt';
+const WIDTH_KEY = 'claus-demo:tripChatWidth:v1';
+const HEIGHT_KEY = 'claus-demo:tripChatHeight:v1';
+const POS_KEY = 'claus-demo:tripChatPos:v1';
 const MIN_PANEL_PX = 320;
 const MAX_PANEL_PX = 720;
 const MIN_PANEL_H = 340;

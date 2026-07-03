@@ -30,15 +30,15 @@ const TripContext = createContext(null);
 const PLAN_NOTIFY_DEBOUNCE_MS = 45 * 1000;
 const PLAN_NOTIFY_MAX_WAIT_MS = 90 * 1000;
 
-const WHO_KEY = 'scandiplan:who';
+const WHO_KEY = 'claus-demo:who';
 // Per-device "Plan only" preference (not synced). Without an explicit manual
 // override, defaults OFF before/after the trip and ON while traveling.
-const HIDE_RECS_KEY = 'scandiplan:hideRecs';
-const HIDE_RECS_MANUAL_KEY = 'scandiplan:hideRecsManual';
+const HIDE_RECS_KEY = 'claus-demo:hideRecs';
+const HIDE_RECS_MANUAL_KEY = 'claus-demo:hideRecsManual';
 // Which stop cards are collapsed. Pure per-device UI state — deliberately NOT
 // part of the synced trip, so opening/closing a card never touches Supabase or
 // version history (only real plan/itinerary edits do).
-const COLLAPSE_KEY = 'scandiplan:collapsed';
+const COLLAPSE_KEY = 'claus-demo:collapsed';
 
 function loadCollapsed() {
   try { return JSON.parse(localStorage.getItem(COLLAPSE_KEY) || '{}') || {}; }
@@ -169,7 +169,7 @@ export function migrate(parsed) {
 
 function loadState() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('scandiplan:v1');
+    const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('claus-demo:v1');
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!parsed) return null;

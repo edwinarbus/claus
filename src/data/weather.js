@@ -16,7 +16,7 @@ const FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
 const ARCHIVE_URL = 'https://archive-api.open-meteo.com/v1/archive';
 const FORECAST_HORIZON_DAYS = 15;
 const CLIMATE_YEARS = [2022, 2023, 2024]; // recent complete summers (ERA5 reanalysis)
-const WX_CACHE_KEY = 'scandiplan:wx:v2'; // v2: drop entries poisoned by null-forecast 0° days
+const WX_CACHE_KEY = 'claus-demo:wx:v2'; // v2: drop entries poisoned by null-forecast 0° days
 
 // ---- WMO weather code → icon + label -------------------------------------
 const CODE_TABLE = {

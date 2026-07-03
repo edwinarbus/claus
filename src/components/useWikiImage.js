@@ -3,7 +3,7 @@
 // the network once per article. Returns a URL string, or '' while loading/none.
 import { useState, useEffect } from '../html.js';
 
-const CACHE_KEY = 'scandiplan:wikiimg:v3';
+const CACHE_KEY = 'claus-demo:wikiimg:v3';
 const SUCCESS_TTL_MS = 1000 * 60 * 60 * 24 * 30; // 30 days
 const FAILURE_TTL_MS = 1000 * 60 * 5; // 5 min — don't freeze the UI on a bad burst
 const MAX_CONCURRENT = 2;

@@ -5,7 +5,7 @@ import { migrate } from '../store/store.js';
 import { diffPlanChanges } from './planChangeDiff.js';
 import { actorOrDefault, sameActor } from './actors.js';
 
-const STORAGE_PREFIX = 'scandiplan:lastSeenTrip:v1';
+const STORAGE_PREFIX = 'claus-demo:lastSeenTrip:v1';
 
 function storageKey(who) {
   return `${STORAGE_PREFIX}:${who || 'anonymous'}`;

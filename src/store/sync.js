@@ -6,7 +6,7 @@ import { actorOrDefault } from '../lib/actors.js';
 
 const SUPABASE_ESM = 'https://esm.sh/@supabase/supabase-js@2.45.4';
 const SNAPSHOT_LIMIT = 50;
-const LOCAL_SNAPSHOT_KEY = 'scandiplan:snapshots:v1';
+const LOCAL_SNAPSHOT_KEY = 'claus-demo:snapshots:v1';
 
 let clientPromise = null;
 

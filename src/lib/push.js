@@ -194,7 +194,7 @@ export async function showLocalPlanEditNotification(editor = '', body = '') {
   }
 }
 
-const WATCH_PING_KEY = 'scandiplan:tripWatchPing';
+const WATCH_PING_KEY = 'claus-demo:tripWatchPing';
 const WATCH_PING_MIN_MS = 30 * 60 * 1000;
 
 // Nudge the server's disruption watch. The endpoint throttles itself (real

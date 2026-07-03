@@ -3,7 +3,7 @@ import { html, useState, useEffect, useRef } from '../html.js';
 // One-time "welcome to Germany" gag modal — fires once the trip reaches its
 // Munich stop and the app quietly renames itself from Claus to Klaus.
 
-const SEEN_KEY = 'scandiplan:klausAnnounce:v1';
+const SEEN_KEY = 'claus-demo:klausAnnounce:v1';
 
 export function shouldShowKlausAnnounce() {
   try { return !localStorage.getItem(SEEN_KEY); } catch { return false; }

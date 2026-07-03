@@ -26,7 +26,7 @@
   <script>
     (function () {
       try {
-        var pref = localStorage.getItem('scandiplan.theme') || 'system';
+        var pref = localStorage.getItem('claus-demo.theme') || 'system';
         var dark = pref === 'dark' || (pref === 'system' &&
           window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
         if (!dark) return;

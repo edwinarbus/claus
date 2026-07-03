@@ -2,7 +2,7 @@
 
 import { TRIP_ID } from '../config.js';
 
-const STORAGE_KEY = 'scandiplan:tripChat:v1';
+const STORAGE_KEY = 'claus-demo:tripChat:v1';
 const MAX_MESSAGES = 60;
 const MAX_CONTENT_LEN = 16_000;
 

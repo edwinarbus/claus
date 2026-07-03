@@ -2,7 +2,7 @@ import { html, useState, useEffect, useRef } from '../html.js';
 import { isIOSLike, pushSupported, subscribeToPush, notificationPermission } from '../lib/push.js';
 import { IconBell, IconEdit, IconSunrise } from './icons.js';
 
-const SEEN_KEY = 'scandiplan:desktopNotifyPromptSeen:v2';
+const SEEN_KEY = 'claus-demo:desktopNotifyPromptSeen:v2';
 
 function isDesktopViewport() {
   try {

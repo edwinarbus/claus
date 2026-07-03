@@ -4,7 +4,7 @@ import { html, useState, useEffect, useRef } from '../html.js';
 // startup modal (welcome-back, recap, onboarding), in the same editorial
 // language as the rest of the app. Bump the SEEN_KEY version to re-announce.
 
-const SEEN_KEY = 'scandiplan:featureAnnounce:overflygning:v2';
+const SEEN_KEY = 'claus-demo:featureAnnounce:overflygning:v2';
 const OVERFLYGNING_IMAGE = new URL('../../assets/overflygning-announcement.jpg', import.meta.url).href;
 
 export function shouldShowFeatureAnnounce() {

@@ -10,7 +10,7 @@ import { isKlausMode } from '../lib/klausMode.js';
 // (which has its own storage, so this shows once more there) the card becomes
 // the actual notification opt-in with the live permission prompt.
 
-const SEEN_KEY = 'scandiplan:mobileOnboardSeen:v1';
+const SEEN_KEY = 'claus-demo:mobileOnboardSeen:v1';
 
 function isMobile() {
   try { return window.matchMedia('(hover: none) and (pointer: coarse)').matches; }

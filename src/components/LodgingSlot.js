@@ -14,7 +14,7 @@ function mapsUrl(place, cityName) {
 
 // Per-device, per-person preference (not synced): hide the neighborhood guide so
 // the other traveler still sees it. Remembered across sessions for that user.
-const GUIDE_HIDE_KEY = 'scandiplan:lodgingGuideHidden';
+const GUIDE_HIDE_KEY = 'claus-demo:lodgingGuideHidden';
 function readGuideHidden() {
   try { return JSON.parse(localStorage.getItem(GUIDE_HIDE_KEY) || '{}'); } catch { return {}; }
 }

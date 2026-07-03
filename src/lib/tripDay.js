@@ -7,7 +7,7 @@ import { dayFullness } from '../data/pacing.js';
 import { weatherCodeInfo } from '../data/weather.js';
 import { sunTimesForDay } from './sun.js';
 
-const SPLASH_KEY = 'scandiplan:tripSplashSeen';
+const SPLASH_KEY = 'claus-demo:tripSplashSeen';
 
 function slotItems(day, key) {
   const v = day.slots?.[key];

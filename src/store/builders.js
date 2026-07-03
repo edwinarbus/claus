@@ -162,7 +162,7 @@ export function buildDaysForCity(cityId, startISO, endISO, prevDays = []) {
   return kept.map((d, i) => (i < firstNew ? d : { ...d, slots: plans[i] || emptySlots() }));
 }
 
-export const STORAGE_KEY = 'scandiplan:v2';
+export const STORAGE_KEY = 'claus-demo:v2';
 export const SCHEMA_VERSION = 15;
 
 // Turn a catalog item (or any item-shaped object) into a fresh placeable instance.

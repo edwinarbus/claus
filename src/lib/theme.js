@@ -11,7 +11,7 @@
 
 import { useState, useEffect } from '../html.js';
 
-export const THEME_KEY = 'scandiplan.theme';
+export const THEME_KEY = 'claus-demo.theme';
 const VALID = new Set(['system', 'light', 'dark']);
 
 // Status-bar / browser-chrome tone so Safari's URL bar and the iOS PWA region

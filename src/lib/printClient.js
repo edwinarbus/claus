@@ -5,8 +5,8 @@
 
 import { bytesToBase64 } from './escpos.js';
 
-const URL_KEY = 'scandiplan:printBridgeUrl';
-const PRINTED_KEY = 'scandiplan:printedBriefDate';
+const URL_KEY = 'claus-demo:printBridgeUrl';
+const PRINTED_KEY = 'claus-demo:printedBriefDate';
 const DEFAULT_URL = 'http://localhost:8899';
 
 export function bridgeUrl() {
