@@ -2197,6 +2197,49 @@ html.dark .trip-chat-receipt { --paper: #fdfcf7; color: #17140f; box-shadow: 4px
 .receipt-map-canvas .leaflet-container { background: #efece6; cursor: default; }
 .receipt-map-canvas .leaflet-interactive,
 .receipt-map-canvas .leaflet-marker-icon { cursor: default; }
+/* Numbered key under the map: each row ties a pin to its name, in pin order.
+   The little badges echo the map pins — filled ink circle + number, a hollow
+   dashed circle for best-guess (≈) spots, and the bed glyph for the hotel. */
+.receipt-map-key {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+}
+.receipt-map-key-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  font-size: 10px;
+  line-height: 1.3;
+}
+.receipt-map-key-n {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  border-radius: 9999px;
+  background: var(--r-ink);
+  color: var(--paper);
+  font-weight: 700;
+  font-size: 9px;
+  display: grid;
+  place-items: center;
+}
+.receipt-map-key-n.is-approx {
+  background: transparent;
+  border: 1.4px dashed color-mix(in srgb, var(--r-ink) 60%, transparent);
+}
+.receipt-map-key-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.receipt-map-key-approx .receipt-map-key-name {
+  font-style: italic;
+  color: color-mix(in srgb, var(--r-ink) 62%, transparent);
+}
 /* Controls live OUTSIDE the paper (in the chat, not the receipt) so they're
    never cloned into the print — Run again / Print, and the live re-run steps. */
 .receipt-controls { width: min(100%, 302px); margin: 0.55rem auto 0; }

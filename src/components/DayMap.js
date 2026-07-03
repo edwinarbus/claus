@@ -309,10 +309,33 @@ export function DayMap({ stop, day, receipt = false }) {
   // Receipt: a static, non-interactive snapshot with no toggle and no getting-
   // around facts (the report already carries a clean, legible "getting around").
   if (receipt) {
+    // The pins carry no labels, so a compact key ties each numbered pin back to
+    // its name — in the exact same order the pins are numbered (both come from
+    // `precise`, so they can't drift). Hollow "≈" rows mirror the dashed
+    // best-guess pins; the bed row is the home-base hotel.
+    const hasKey = precise.length || approxPts.length || lodgeLoc;
     return html`<div class="receipt-map">
       <div class="receipt-map-head">◆ THE DAY ◆</div>
       <div ref=${elRef} class="receipt-map-canvas"
         style=${{ opacity: revealed ? 1 : 0 }}></div>
+      ${hasKey ? html`<div class="receipt-map-key">
+        ${precise.map((x, idx) => html`
+          <div class="receipt-map-key-item" key=${x.p.id}>
+            <span class="receipt-map-key-n">${idx + 1}</span>
+            <span class="receipt-map-key-name">${x.p.name}</span>
+          </div>`)}
+        ${approxPts.map((x) => html`
+          <div class="receipt-map-key-item receipt-map-key-approx" key=${x.p.id}>
+            <span class="receipt-map-key-n is-approx" aria-hidden="true"></span>
+            <span class="receipt-map-key-name">≈ ${x.p.name}</span>
+          </div>`)}
+        ${lodgeLoc ? html`
+          <div class="receipt-map-key-item">
+            <span class="receipt-map-key-n is-lodge"
+              dangerouslySetInnerHTML=${{ __html: bedGlyph('currentColor', 9) }}></span>
+            <span class="receipt-map-key-name">${lodgeLoc.p.name}</span>
+          </div>` : null}
+      </div>` : null}
     </div>`;
   }
 
