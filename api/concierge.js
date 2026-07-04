@@ -174,6 +174,7 @@ async function serviceTripStateTool(sessionId, events) {
   if (!pending.length) return 0;
 
   const trip = await fetchTrip().catch(() => null);
+  console.log('[concierge-diag] fetchTrip result:', trip ? `${trip.startDate}..${trip.endDate} stops=${(trip.stops || []).map((s) => s.name).join(',')}` : 'NULL');
   const payload = JSON.stringify({ todayISO: todayISO(), trip: trip || {} }).slice(0, 200000);
   for (const call of pending) {
     await sendSessionEvents(sessionId, [{
