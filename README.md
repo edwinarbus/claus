@@ -27,15 +27,19 @@ disposable, delightfully analog daily briefing that exists purely because an
 agent did its job overnight.
 
 **Claus chat (Claude Sonnet 5).** One text box, streamed. Ask it to rework a day
-and it searches the live web, reasons out loud via **adaptive thinking** (you see
-the reasoning summary stream in, not a spinner), and — when asked — proposes
-structured itinerary edits you approve before they land. Every turn is grounded in
-the actual trip: the current itinerary rides in a cached system block, so asking
-five questions about the same plan only pays full price once.
+and it searches the live web, reasons out loud via **adaptive thinking**, and —
+when asked — actually edits the plan itself: it dispatches real changes straight
+into the shared itinerary (move a stop, swap a slot, update a transport leg,
+shift the trip dates) and confirms what changed, live for both travelers. Every
+turn is grounded in the actual trip: the current itinerary rides in a cached
+system block, so asking five questions about the same plan only pays full price
+once.
 
 **Ticket & reservation reading (Claude Sonnet 5).** Photograph a boarding pass or
-drop in a booking PDF and Claude reads it with vision or native PDF understanding
-and returns clean, typed fields — no manual entry, no OCR service.
+drop in a booking PDF and Claude reads it with vision or native PDF understanding,
+matches it to the right day, and **writes the reservation straight into the
+itinerary itself** — the lodging, dinner, or transport leg just appears on the
+plan.
 
 **Three views, one live plan.** Timeline, Calendar, and a real Leaflet map, plus a
 cinematic satellite **flyover** ([`StoryMode`](src/components/StoryMode.js)) that
