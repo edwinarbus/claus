@@ -148,6 +148,7 @@ notifications from the installed app.
 
 | Variable | For |
 |---|---|
+| `ANTHROPIC_API_KEY` | Every Claude feature — chat, ticket reading, disruption alerts, the Concierge |
 | `CRON_SECRET` | Gates the Concierge's `?setup=1` provisioning; doubles as its webhook token fallback |
 | `ANTHROPIC_WEBHOOK_SIGNING_KEY` | Verifies the Concierge's webhook HMAC |
 | `PRINTER_CUPS` / `PRINTER_HOST` | Tells `printbridge.py` how to reach the Epson (USB queue name vs. network IP) |
