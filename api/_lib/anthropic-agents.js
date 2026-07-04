@@ -77,6 +77,15 @@ function getDeploymentRun(runId) {
   return json(`/deployment_runs/${encodeURIComponent(runId)}`);
 }
 
+// Session details, including the resolved `agent` config — used to verify a
+// webhook-delivered session actually belongs to THIS app's own agent before
+// servicing/harvesting it (see the ownership check in concierge.js: session
+// webhooks fire workspace-wide, not per-registered-endpoint, so any other app
+// sharing this Anthropic workspace will otherwise receive and act on it too).
+function getSession(sessionId) {
+  return json(`/sessions/${encodeURIComponent(sessionId)}`);
+}
+
 // Fire a deployment on demand (outside its cron schedule) via the deployment's
 // `run` action endpoint. It creates a session immediately (a deployment run with
 // trigger_context.type "manual") and returns that run — { id, session_id, … }.
@@ -158,6 +167,7 @@ module.exports = {
   createDeployment,
   getDeploymentRun,
   createDeploymentRun,
+  getSession,
   listSessionEvents,
   sendSessionEvents,
   listSessionFiles,

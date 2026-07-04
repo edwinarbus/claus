@@ -23,7 +23,7 @@ const { fetchTrip, todayISO } = require('./_lib/brief.js');
 const { apiKey } = require('./_lib/claus-anthropic.js');
 const {
   createEnvironment, createAgent, createMemoryStore, createMemory, createDeployment,
-  createDeploymentRun, getDeploymentRun,
+  createDeploymentRun, getDeploymentRun, getSession,
   listSessionEvents, sendSessionEvents, listSessionFiles, downloadFileText, verifyWebhook,
 } = require('./_lib/anthropic-agents.js');
 
@@ -163,7 +163,20 @@ function safeJson(text) {
 const toolNameOf = (e) => e.name || e.tool_name || e.custom_tool_name || e?.custom_tool_use?.name;
 const toolIdOf = (e) => e.id || e.custom_tool_use_id || e?.custom_tool_use?.id;
 
-async function serviceTripStateTool(sessionId, events) {
+// Guards every entry point that touches a session by an ID we didn't just
+// create ourselves (webhook deliveries — which fire workspace-wide for ANY
+// app's sessions, not just the endpoint that registered them — and the poll
+// endpoint, which takes the session id as a client-supplied query param).
+// Without this, we'd blindly answer another app's pending read_trip_state
+// call with our own trip data, or harvest their session as our own `latest`.
+async function ensureOwnSession(sessionId, state) {
+  const ourAgentId = state?.concierge?.agentId;
+  if (!ourAgentId) return true; // not yet provisioned — nothing to compare against
+  const session = await getSession(sessionId).catch(() => null);
+  return !!session && session.agent?.id === ourAgentId;
+}
+
+async function serviceTripStateTool(sessionId, events, state) {
   const resultFor = new Set(
     events.filter((e) => e?.type === 'user.custom_tool_result')
       .map((e) => e.custom_tool_use_id).filter(Boolean),
@@ -172,9 +185,9 @@ async function serviceTripStateTool(sessionId, events) {
     (e) => e?.type === 'agent.custom_tool_use' && toolNameOf(e) === 'read_trip_state' && !resultFor.has(toolIdOf(e)),
   );
   if (!pending.length) return 0;
+  if (!(await ensureOwnSession(sessionId, state))) return 0;
 
   const trip = await fetchTrip().catch(() => null);
-  console.log('[concierge-diag] fetchTrip result:', trip ? `${trip.startDate}..${trip.endDate} stops=${(trip.stops || []).map((s) => s.name).join(',')}` : 'NULL');
   const payload = JSON.stringify({ todayISO: todayISO(), trip: trip || {} }).slice(0, 200000);
   for (const call of pending) {
     await sendSessionEvents(sessionId, [{
@@ -213,6 +226,7 @@ async function pushToSubscribers(notification) {
 // and notify. Deduped per session so repeated idle webhooks don't re-push.
 async function harvestSession(sessionId, { notify = true } = {}) {
   const state = await loadTripState();
+  if (!(await ensureOwnSession(sessionId, state))) return { note: 'not our session' };
   const processed = state.concierge?.processed || {};
   if (processed[sessionId]) return { note: 'already processed', done: true };
 
@@ -293,12 +307,18 @@ async function handleWebhook(req, res) {
   // are acknowledged (the session's own idle event carries the work). Match both
   // session.status_idle and .status_idled to be safe.
   if (/^session\.status_idle/.test(eventType) && sessionId) {
+    // Session webhooks fire workspace-wide, not just for the endpoint that
+    // registered them — any other app sharing this Anthropic workspace will
+    // ALSO receive idle events for THIS session. serviceTripStateTool and
+    // harvestSession each verify session ownership before doing anything, so
+    // an idle event for a session that isn't ours is a harmless no-op here.
     const events = (await listSessionEvents(sessionId).catch((e) => {
       console.warn('[concierge] listSessionEvents failed', String(e && e.message).slice(0, 160));
       return { data: [] };
     })).data || [];
     console.log('[concierge] idle', sessionId, 'events', events.length, 'types', [...new Set(events.map((e) => e?.type))].join(','));
-    const serviced = await serviceTripStateTool(sessionId, events);
+    const state = await loadTripState();
+    const serviced = await serviceTripStateTool(sessionId, events, state);
     console.log('[concierge] serviced', serviced);
     if (serviced > 0) { res.status(200).json({ status: 'ok', serviced }); return; }
     const harvest = await harvestSession(sessionId);
@@ -405,8 +425,12 @@ async function handlePoll(req, res) {
 
   const events = (await listSessionEvents(sessionId).catch(() => ({ data: [] }))).data || [];
   // Keep the agent moving: answer any pending read_trip_state, exactly as the
-  // nightly webhook would.
-  await serviceTripStateTool(sessionId, events).catch(() => {});
+  // nightly webhook would. `sessionId`/`runId` here are client-supplied query
+  // params, not something we created — serviceTripStateTool's ownership check
+  // is what actually keeps this endpoint from being used to poke at (or
+  // harvest) some other session.
+  const pollState = await loadTripState();
+  await serviceTripStateTool(sessionId, events, pollState).catch(() => {});
 
   const harvest = await harvestSession(sessionId, { notify: false }).catch(() => ({}));
   const { reasoning, searches } = mapRunSteps(events);
