@@ -2,9 +2,10 @@
 //
 // This is the standalone demo clone. It is intentionally NOT wired to any
 // backend: Supabase sync is OFF (the app runs local-only, saving to the
-// browser), and there's no Vercel deployment. The trip is seeded locally to
-// start tomorrow, and the daily briefing renders from the local trip data (plus
-// the devserver's mock concierge when you run scripts/devserver.py).
+// browser), and there's no Vercel deployment. The trip is seeded locally on
+// its fixed Jul 2 - Jul 11 dates, and the daily briefing renders from the
+// local trip data (plus the devserver's mock concierge when you run
+// scripts/devserver.py).
 
 export const SUPABASE_URL = '';
 export const SUPABASE_ANON_KEY = '';

@@ -163,7 +163,7 @@ export function buildDaysForCity(cityId, startISO, endISO, prevDays = []) {
 }
 
 // Demo: bumped to v3 so an already-seeded browser (older date, no hotels)
-// re-seeds fresh — tomorrow start + the real booked hotels.
+// re-seeds fresh — the fixed Jul 2 - Jul 11 route + the real booked hotels.
 export const STORAGE_KEY = 'claus-demo:v3';
 export const SCHEMA_VERSION = 15;
 
