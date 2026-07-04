@@ -16,17 +16,14 @@ import { LODGING_BY_CITY, EXTRA_ITEMS_BY_CITY, HEAT_REASON_DEFAULTS, MORE_SUGGES
 // tags vocabulary: 'food' | 'nature' | 'culture' | 'landmark'
 // Tiers: 1 = unmissable · 2 = high value if you have time · 3 = nice extra.
 
-// The classic loop, south -> north, ending on the fjords.
+// The classic loop, south -> north, ending on the fjords. Trimmed to a
+// 4-stop, 9-night demo trip (Jul 2 -> Jul 11) — see src/store/store.js for
+// the fixed seed date this pairs with.
 export const DEFAULT_ROUTE = [
   { city: 'copenhagen', nights: 3, transportToNext: { mode: 'train', note: 'direct intercity train', durationMin: 210 } },
   { city: 'aarhus', nights: 2, transportToNext: { mode: 'train', note: 'train via Odense, then the Ærø ferry', durationMin: 300 } },
   { city: 'aero', nights: 2, transportToNext: { mode: 'train', note: 'ferry off the island, then train to Kalmar', durationMin: 480 } },
-  { city: 'kalmar', nights: 2, transportToNext: { mode: 'train', note: '', durationMin: 270 } },
-  { city: 'stockholm', nights: 3, transportToNext: { mode: 'overnight boat', note: 'night cruise to Helsinki', durationMin: 1020 } },
-  { city: 'helsinki', nights: 2, transportToNext: { mode: 'flight', note: 'fly from Helsinki to Bergen (Finnair nonstop, ~2h30)', durationMin: 150 } },
-  { city: 'bergen', nights: 2, transportToNext: { mode: 'train', note: 'Norway in a Nutshell — Bergen Railway to Voss, bus to Gudvangen, Nærøyfjord cruise to Flåm', durationMin: 360 } },
-  { city: 'flam', nights: 4, transportToNext: { mode: 'train', note: 'Flåm Railway to Myrdal, then the Bergen Railway down to Oslo', durationMin: 370 } },
-  { city: 'oslo', nights: 2, transportToNext: null },
+  { city: 'kalmar', nights: 2, transportToNext: null },
 ];
 
 // Addable beyond the default route.

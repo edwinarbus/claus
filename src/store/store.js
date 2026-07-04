@@ -14,7 +14,7 @@ import {
 } from './sync.js';
 import { slotAssignmentAdvice, stopMoveAdvice } from '../data/planAdvice.js';
 import { DEMO_HOTELS } from '../data/demoHotels.js';
-import { todayISO, daysBetween, addDays } from '../lib/dates.js';
+import { todayISO, daysBetween } from '../lib/dates.js';
 import { summarizeTripEdit, composePlanEditNotification, editSummaryKey } from '../lib/editSummary.js';
 import { diffPlanChanges } from '../lib/planChangeDiff.js';
 import { notifyPlanChange, syncPushIdentity, showLocalPlanEditNotification } from '../lib/push.js';
@@ -277,10 +277,10 @@ export function TripProvider({ children }) {
   const [trip, rawDispatch] = useReducer(reducer, undefined, () => {
     const saved = loadState();
     if (saved) return migrate(saved) || initialTrip();
-    // DEMO: no saved trip yet → seed the curated route starting TOMORROW, so a
+    // DEMO: no saved trip yet → seed the curated route on its fixed dates, so a
     // fresh browser opens straight into a full itinerary (no backend, no empty
     // state). Reuses the exact "Load default route" reducer path.
-    return withDemoHotels(reducer(initialTrip(), { type: 'LOAD_DEFAULT_ROUTE', startDate: addDays(todayISO(), 1) }));
+    return withDemoHotels(reducer(initialTrip(), { type: 'LOAD_DEFAULT_ROUTE', startDate: '2026-07-02' }));
   });
   const tripRef = useRef(trip);
   tripRef.current = trip;
