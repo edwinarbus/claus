@@ -1,258 +1,175 @@
 # Claus
 
-**Claus** is a Claude-powered travel concierge wrapped around a hand-built
-itinerary for a July 2026 trip through **Scandinavia and the Baltics**. It plans,
-researches, and briefs: a streaming chat that answers with live web results and
-rewrites your itinerary, a nightly agent that wakes up and researches tomorrow's
-city, ticket photos that read themselves, and a morning brief that prints to a
-thermal receipt printer.
+A personal, two-person trip planner for a July 2026 **Scandinavia & Baltics**
+itinerary. It's a hand-built plan — cities, stops, bookings — with Claude wrapped
+around it: a chat that answers with live research and rewrites the plan itself,
+an overnight agent that researches tomorrow and hands you a printed paper brief
+before you've had coffee, and photo/PDF reading for tickets and reservations.
 
-Every AI surface runs on the **Claude API** — the Messages API and Managed Agents,
-called with plain `fetch` from Vercel functions. No SDK, and no build step: the
-whole front end is ES modules + React/htm/Tailwind + Leaflet over a CDN.
+Nothing here is generic travel-planning boilerplate — the itinerary is real, the
+picks are hand-written, and Claude only ever acts on *this* trip's actual state.
 
----
+## What it does
 
-## Powered by the Claude API
+**Three views, one live plan.** Timeline, Calendar, and a real Leaflet map, plus a
+cinematic satellite **flyover** ([`StoryMode`](src/components/StoryMode.js)) that
+flies the whole route stop to stop. Drag a stop's edge to resize it, drag
+recommendations onto a per-day planner, watch a pacing meter tuned to a quick
+pace. The trip **syncs live between two phones** (Supabase realtime) with a short
+push notification whenever one traveler edits the plan.
 
-All AI is the **Anthropic Messages API** (`POST /v1/messages`) on **Claude
-Sonnet 5**, called with raw `fetch` — no SDK — from the functions in
-[`api/`](api), with jittered retries on 429/5xx/overloaded. One env var,
-**`ANTHROPIC_API_KEY`**, turns everything on; without it the app still runs on
-hand-written fallbacks (chat and ticket auto-fill just say "not configured").
+**Claus chat (Claude Sonnet 5).** One text box, streamed. Ask it to rework a day
+and it searches the live web, reasons out loud via **adaptive thinking** (you see
+the reasoning summary stream in, not a spinner), and — when asked — proposes
+structured itinerary edits you approve before they land. Every turn is grounded in
+the actual trip: the current itinerary rides in a cached system block, so asking
+five questions about the same plan only pays full price once.
 
-| Surface | Claude API features it uses |
+**Ticket & reservation reading (Claude Sonnet 5).** Photograph a boarding pass or
+drop in a booking PDF and Claude reads it with vision or native PDF understanding
+and returns clean, typed fields — no manual entry, no OCR service.
+
+**The Overnight Concierge — a Claude Managed Agent, not a cron job.** Every night
+at 21:00 Europe/Copenhagen, a persistent agent wakes up in its own Anthropic-hosted
+sandbox, pulls the live itinerary, researches tomorrow's city (weather, closures,
+disruptions, events) with real web search, and writes the morning brief — carrying
+forward what it's learned about the travelers' preferences from a durable memory
+store, night over night. This is core to the app, not a bolt-on: the moment the
+brief is ready, it **renders as an 80mm thermal receipt and prints itself,
+automatically, to a real Epson receipt printer** — no button, no phone, nothing to
+remember. You wake up to a small paper slip already sitting by the printer: the
+day's weather, the plan, a couple of local-language phrases for the city you're
+in. A fun, disposable, pocketable version of the morning briefing a human
+concierge would slide under your door.
+
+**Everything else:** a strict-JSON relevance classifier ranks real disruption
+headlines instead of keyword-matching them; every upcoming day's brief is
+pre-generated overnight via the **Batch API** at half price; recommendations are
+tiered (must-see / must-do / must-eat) with time estimates and, for local food, the
+top few places to get it.
+
+## Stack
+
+- Plain **ES modules** — React 18 + htm (JSX-like templates, no transpiler) +
+  Tailwind, all over a CDN. No build step, no bundler, no `package.json` for the
+  front end.
+- **Leaflet** (OpenStreetMap/CARTO) for the three views; a satellite/DEM tile
+  pipeline for the StoryMode flyover.
+- **Supabase** (Postgres + realtime) for the shared trip row and push
+  subscriptions — optional, local-only `localStorage` otherwise.
+- **Vercel functions** in `api/` — plain CommonJS + global `fetch`, no SDK — for
+  every Claude call, ticket parsing, and the concierge webhook.
+- **`scripts/printbridge.py`** — a tiny stdlib-only local relay that turns
+  browser-rendered ESC/POS bytes into real thermal-printer output over USB or TCP.
+
+## Claude API surface
+
+Every AI feature is the **Anthropic Messages API** on **Claude Sonnet 5**, called
+with raw `fetch` from `api/` — jittered retries on 429/5xx/overloaded, and every
+call checks `stop_reason` explicitly rather than assuming success.
+
+| Feature | API surface |
 |---|---|
-| **Claus chat** — [`api/trip-chat.js`](api/trip-chat.js) | **Streaming (SSE)** · **adaptive thinking** (`thinking: {type:"adaptive", display:"summarized"}`, `output_config.effort: "low"`) streamed live as a reasoning summary · **server-side web search** (`web_search_20260318`, `max_uses`, `user_location` biased to the current city) + **web fetch** (`web_fetch_20260209`) · **citations** → an auto-appended Sources list · **prompt caching** (`cache_control: {type:"ephemeral"}`) on the itinerary system block, so repeat turns on the same plan are served from cache · **tool use** — a `propose_trip_edits` tool streams structured itinerary edits as they generate |
-| **Ticket / reservation reading** — [`api/extract-ticket.js`](api/extract-ticket.js), [`api/match-ticket.js`](api/match-ticket.js) | **Vision** (a photo → `image` block) and **PDF document input** (a booking PDF → `document` block, base64) · **structured outputs** — a strict `json_schema` via `output_config.format` returns typed reservation fields |
-| **Morning brief & welcome copy** — [`api/morning-brief.js`](api/morning-brief.js), [`api/welcome-brief.js`](api/welcome-brief.js), [`api/_lib/brief-ai.js`](api/_lib/brief-ai.js) | **Structured outputs** (strict `json_schema`); thinking disabled for fast, deterministic copy |
-| **Brief pre-warming** — [`api/prewarm-briefs.js`](api/prewarm-briefs.js), [`api/_lib/batch-brief.js`](api/_lib/batch-brief.js) | **Batch API** (`/v1/messages/batches`) — every upcoming day's brief generated ahead of time at **50% cost**, results keyed by `custom_id` |
-| **Disruption alerts** — [`api/trip-watch.js`](api/trip-watch.js), [`api/_lib/classify-alerts.js`](api/_lib/classify-alerts.js) | A **structured-output relevance classifier** ranks GDELT headlines instead of keyword-matching (keyword fallback with no key) |
-| **Overnight Concierge** — [`api/concierge.js`](api/concierge.js), [`api/_lib/anthropic-agents.js`](api/_lib/anthropic-agents.js) | **Managed Agents (beta)** — see below |
+| Claus chat — [`api/trip-chat.js`](api/trip-chat.js) | Streaming `messages.create`; **adaptive thinking** (`thinking: {type:"adaptive", display:"summarized"}`, `output_config.effort:"low"`) streamed live as a reasoning summary; server-side **web search** (`web_search_20260318`, `user_location` biased to the current city) + **web fetch** (`web_fetch_20260209`) with **citations** rolled into an auto-appended Sources list; **prompt caching** (`cache_control: ephemeral`) on the itinerary system block so repeat turns on the same plan are served from cache; **tool use** — a `propose_trip_edits` tool streams structured itinerary edits as they generate |
+| Ticket / reservation reading — [`api/extract-ticket.js`](api/extract-ticket.js), [`api/match-ticket.js`](api/match-ticket.js) | **Vision** (`image` block) and native **PDF document input** (`document` block, base64); strict **structured outputs** (`output_config.format: json_schema`) for typed fields |
+| Morning/welcome brief copy — [`api/_lib/brief-ai.js`](api/_lib/brief-ai.js) | Structured outputs, thinking off, for fast deterministic copy |
+| Brief pre-warming — [`api/_lib/batch-brief.js`](api/_lib/batch-brief.js) | **Batch API** (`/v1/messages/batches`) — every upcoming day generated overnight at 50% cost, results keyed by `custom_id` |
+| Disruption alerts — [`api/_lib/classify-alerts.js`](api/_lib/classify-alerts.js) | A structured-output relevance classifier ranks real headlines instead of keyword-matching |
+| **The Overnight Concierge** — [`api/concierge.js`](api/concierge.js), [`api/_lib/anthropic-agents.js`](api/_lib/anthropic-agents.js) | **Managed Agents**, in full: a persisted, versioned **Agent** (model + system prompt + tools) inside a **cloud Environment**; a **scheduled Deployment** (cron) firing a fresh **session** nightly; a workspace **Memory Store** the agent reads and writes at `/mnt/memory` to carry preferences across nights; a custom `read_trip_state` **tool** the app services live, so Supabase credentials never enter the agent's container; the **Files API** for the brief the agent writes; **HMAC-verified webhooks** (`session.status_idled`, `deployment_run.*`) that harvest the finished brief the instant the session goes idle and trigger the print |
 
-### Overnight Concierge (Managed Agents)
-
-A persistent **Managed Agent** researches tomorrow's city each night — weather,
-closures, disruptions, events — on Anthropic's own infrastructure, remembers the
-travelers' preferences, writes a morning brief, and pushes "brief ready." It
-exercises most of the Managed Agents surface (beta header
-`managed-agents-2026-04-01`):
-
-- a **persistent, versioned agent** + a **cloud environment**, provisioned once
-  (or applied from [`agents/*.yaml`](agents) with the `ant` CLI);
-- a **scheduled deployment** — a cron that fires a fresh **session** nightly at
-  **21:00 Europe/Copenhagen** (the evening before);
-- a **memory store** the agent reads/writes at `/mnt/memory` to carry preferences
-  across nights;
-- a **custom tool**, `read_trip_state`, that the app services — so the live plan
-  reaches the agent while your Supabase credentials never enter its container;
-- the **Files API** (`files-api-2025-04-14`) for the `concierge.json` brief the
-  agent writes;
-- **HMAC-verified webhooks** (`session.status_idled`, `deployment_run.*`) that
-  harvest the finished brief and web-push it.
-
-Setup is [below](#overnight-concierge-setup-optional).
-
----
-
-## What else the app does
-
-- **Three views** — **Timeline**, **Calendar**, and a real Leaflet **Map** — plus
-  a cinematic **flyover** ([`StoryMode`](src/components/StoryMode.js)) that flies
-  the route stop to stop over satellite tiles.
-- **Tiered, image-rich recommendations** (must-see / must-do / must-eat) with time
-  estimates, source links, and the top places for each local delicacy. Drag a
-  stop's edge to resize it, drag recommendations onto a **per-day planner**, and
-  watch a pacing meter tuned to a quick pace.
-- **Live weather** (Open-Meteo — live within ~15 days, recent-July average
-  otherwise) and gentle day-to-day **nudges**. Every stop, item, blurb, tier,
-  and note is editable.
-- **Live 2-person sync** — the trip saves to `localStorage` and, when a Supabase
-  project is configured, to one shared row with realtime sync, so edits appear
-  instantly for both travelers.
-- **Push notifications** — a short diff when the other traveler edits the plan
-  (*"Edwin removed Copenhagen and added Tallinn"*), and a 6 AM morning brief
-  (weather + the day's sights + any disruption heads-up).
-- **A daily briefing receipt** — the morning brief renders as an **80mm thermal
-  receipt** (with a day map and local-language phrases) and can print for real to
-  an **Epson TM-m30II**: the browser rasterizes it to **ESC/POS**
-  ([`src/lib/thermalReceipt.js`](src/lib/thermalReceipt.js),
-  [`escpos.js`](src/lib/escpos.js)) and a tiny local bridge
-  ([`scripts/printbridge.py`](scripts/printbridge.py)) relays the bytes over USB
-  or TCP.
-
----
-
-## Run it locally
-
-No build step and no Node required for the UI — plain ES modules over a CDN.
+## Quick start
 
 ```bash
 cd claus
-python3 scripts/devserver.py 8777      # tiny no-cache static server
-# then open http://127.0.0.1:8777/
+python3 scripts/devserver.py 8777      # no-cache static server for the UI
+# → http://127.0.0.1:8777/
 ```
 
-Internet is needed for the CDN libraries, map tiles (OpenStreetMap/CARTO),
-weather (Open-Meteo), and recommendation thumbnails (Wikipedia). The Claude
-features live in the `api/` Vercel functions — deploy to Vercel, or run
-`vercel dev`, to exercise chat, ticket reading, briefs, and the concierge.
+The Claude features live in `api/` and need Vercel:
 
-## Sharing between two people (2-minute setup)
+```bash
+vercel dev        # local, with the api/ functions live
+# or: vercel       # deploy — required for chat, ticket reading, and the concierge
+```
 
-Out of the box the trip saves to your browser. To share one live itinerary, add a
-free [Supabase](https://supabase.com) project — no server to run.
+Run the local print bridge to have briefs print for real (see below for the
+printer itself):
 
-1. Create a project. From **Project Settings → API**, copy the **Project URL** and
-   the **anon public** key.
-2. Paste them into [`src/config.js`](src/config.js):
+```bash
+PRINTER_CUPS=TM_m30II python3 scripts/printbridge.py   # or PRINTER_HOST=<ip>
+```
 
-   ```js
-   export const SUPABASE_URL = 'https://YOURPROJECT.supabase.co';
-   export const SUPABASE_ANON_KEY = 'eyJ...your anon key...';
-   ```
+## Setup
 
-   (The anon key is safe to commit — it's public by design; the row is protected
-   by the policy below.)
-3. In the Supabase **SQL Editor**, run:
+**Sharing between two phones** — add a free [Supabase](https://supabase.com)
+project, drop the URL + anon key into [`src/config.js`](src/config.js), then in
+the SQL Editor:
 
-   ```sql
-   create table if not exists public.trips (
-     id text primary key,
-     data jsonb not null,
-     updated_at timestamptz not null default now()
-   );
+```sql
+create table if not exists public.trips (
+  id text primary key, data jsonb not null, updated_at timestamptz not null default now());
+alter table public.trips enable row level security;
+create policy "shared trip read"   on public.trips for select using (true);
+create policy "shared trip write"  on public.trips for insert with check (true);
+create policy "shared trip update" on public.trips for update using (true) with check (true);
+alter publication supabase_realtime add table public.trips;
+```
 
-   alter table public.trips enable row level security;
+**Push notifications** — same SQL pattern for a `push_subscriptions` table (see
+[`api/_lib/webpush.js`](api/_lib/webpush.js)), then set `VAPID_PRIVATE_KEY` on
+Vercel. On iPhone: Safari → Share → **Add to Home Screen**, then allow
+notifications from the installed app.
 
-   -- One shared trip for the two of you (trusted users, no login).
-   create policy "shared trip read"  on public.trips for select using (true);
-   create policy "shared trip write" on public.trips for insert with check (true);
-   create policy "shared trip update" on public.trips for update using (true) with check (true);
+**The Overnight Concierge** — provision once:
 
-   -- Let both browsers receive live updates.
-   alter publication supabase_realtime add table public.trips;
-   ```
+```bash
+curl -X POST "https://YOURAPP.vercel.app/api/concierge?setup=1" \
+  -H "authorization: Bearer $CRON_SECRET"
+```
 
-Reload the app: the header shows **Synced**, and edits from either person appear
-live for the other.
+This creates the agent, environment, memory store, and nightly deployment, and
+saves the IDs into the shared trip state (prefer version control? apply
+[`agents/concierge.agent.yaml`](agents/concierge.agent.yaml) +
+[`agents/concierge.environment.yaml`](agents/concierge.environment.yaml) with the
+`ant` CLI instead). Register a Console webhook for `session.status_idled` and
+`deployment_run.*` pointed at `/api/concierge`. From then on it runs itself —
+every night, unattended, ending with a real receipt printed and waiting.
 
-## Notifications (plan edits + 6 AM brief)
+**The thermal printer** — an Epson TM-m30II on USB or the network. Keep
+`scripts/printbridge.py` running near the printer (`--selftest` prints a check
+slip); the app auto-prints the moment a new brief lands and the bridge is
+reachable, with a manual **Print to Epson** button in chat as a fallback.
 
-**One-time setup:**
+## Environment variables
 
-1. In the Supabase **SQL Editor**, store each device's push subscription:
+| Variable | For |
+|---|---|
+| `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `TRIP_ID` | Shared trip + push subscriptions |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | Web push |
+| `CRON_SECRET` | Gates `/api/morning-brief` and `?setup=1`; doubles as the concierge webhook token |
+| `ANTHROPIC_WEBHOOK_SIGNING_KEY` | Verifies the concierge's webhook HMAC |
+| `PRINTER_CUPS` / `PRINTER_HOST` | Tells `printbridge.py` how to reach the Epson (USB queue name vs. network IP) |
 
-   ```sql
-   create table if not exists public.push_subscriptions (
-     endpoint text primary key,
-     trip_id text not null,
-     data jsonb not null,
-     who text default '',
-     created_at timestamptz not null default now(),
-     updated_at timestamptz not null default now()
-   );
-
-   alter table public.push_subscriptions enable row level security;
-
-   create policy "push read"   on public.push_subscriptions for select using (true);
-   create policy "push insert" on public.push_subscriptions for insert with check (true);
-   create policy "push update" on public.push_subscriptions for update using (true) with check (true);
-   create policy "push delete" on public.push_subscriptions for delete using (true);
-   ```
-
-2. In Vercel → Settings → Environment Variables, set **`VAPID_PRIVATE_KEY`** — the
-   private half of the Web Push keypair (the public half is committed in
-   `src/config.js` / `api/_lib/config.js`). To mint a fresh pair:
-
-   ```bash
-   node -e "const{generateKeyPairSync}=require('crypto');const{publicKey,privateKey}=generateKeyPairSync('ec',{namedCurve:'prime256v1'});const pub=publicKey.export({format:'jwk'});console.log('public :','B'+Buffer.concat([Buffer.from([4]),Buffer.from(pub.x,'base64url'),Buffer.from(pub.y,'base64url')]).toString('base64url').slice(1));console.log('private:',privateKey.export({format:'jwk'}).d)"
-   ```
-
-3. Deploy. Plan-change pushes are sent by `/api/push` after a shared-trip edit;
-   `vercel.json` declares the daily cron (`/api/morning-brief` at 04:00 UTC).
-
-**On each iPhone:** open the site in Safari → Share → **Add to Home Screen** → open
-the installed app → allow notifications (iOS only allows web push from installed
-Home Screen apps, iOS 16.4+). **On desktop:** accept the permission prompt once per
-browser.
-
-**Test before the trip:** `…/api/morning-brief?test=1&dry=1` composes the brief for
-the first planned day without sending; drop `&dry=1` to actually push it.
-
-Overridable env vars: `VAPID_PUBLIC_KEY`, `VAPID_SUBJECT`, `SUPABASE_URL`,
-`SUPABASE_ANON_KEY`, `TRIP_ID`, and optional `CRON_SECRET` (when set, Vercel sends
-it as a Bearer token and the endpoint rejects anyone else).
-
-## Overnight Concierge setup (optional)
-
-Beta; sessions cost money to run.
-
-1. **Env vars** in Vercel: `ANTHROPIC_API_KEY` (required — provisions + runs the
-   agent), `CRON_SECRET` (gates `?setup=1`, doubles as the webhook `?token=`
-   fallback), `ANTHROPIC_WEBHOOK_SIGNING_KEY` (verifies webhook HMAC). The brief
-   env vars above still apply — the `VAPID_*` keys are what deliver the push.
-
-2. In the Anthropic Console, register a **webhook** for `session.status_idled` and
-   `deployment_run.*` pointing at `https://YOURAPP.vercel.app/api/concierge`.
-   (Where the platform pre-parses the body so raw-body HMAC isn't possible, append
-   `?token=<CRON_SECRET>` to the URL instead.)
-
-3. Provision the environment, memory store, agent, and nightly deployment:
-
-   ```bash
-   curl -X POST "https://YOURAPP.vercel.app/api/concierge?setup=1" \
-     -H "authorization: Bearer $CRON_SECRET"   # only needed if CRON_SECRET is set
-   ```
-
-   A fresh provision saves the agent/store/deployment IDs into the shared trip
-   state and returns the next `upcomingRuns`. Add `?force=1` to rebuild. (Prefer
-   version control? Apply [`agents/concierge.agent.yaml`](agents/concierge.agent.yaml)
-   + [`agents/concierge.environment.yaml`](agents/concierge.environment.yaml) with
-   the `ant` CLI instead.)
-
-It then runs itself nightly: the brief lands as a **"☕ Tomorrow's brief is ready"**
-push and on the app's welcome screen. Setup + webhook share one endpoint to stay
-within Vercel's 12-function Hobby limit.
-
-## Deploy
-
-No build step, so any static host works; the `api/` functions need Vercel.
-
-- **Vercel** — `vercel` from this folder (framework "Other", output root). Required
-  for the Claude features.
-- **Netlify / GitHub Pages** — fine for a static, UI-only deploy (`netlify.toml` is
-  set up); the AI endpoints won't run there.
-
-## How it's built
-
-- **React 18 + htm** (JSX-like templates, no transpiler) and **Tailwind** via the
-  runtime CDN, plus a bespoke CSS layer in [`styles.css`](styles.css).
-- **State:** one reducer (`src/store/`) → persisted to `localStorage` and, when
-  configured, to a shared Supabase row with realtime sync.
-- **Map:** Leaflet (OpenStreetMap/CARTO) for the views; a satellite/DEM flyover for
-  StoryMode. Numbered route pins, transport icons, focus-on-select.
-- **Backend:** Vercel functions in `api/` — plain CommonJS + global `fetch`, no
-  SDK, no `package.json` — talking to the Claude API and Supabase.
+## Project layout
 
 ```
 src/
-  config.js    Supabase URL + anon key (shared sync) — empty = local only
-  data/        catalog (tiers, durations, places, wiki images), slots, weather, logistics, pacing, nudges
-  store/       builders, reducer, store (context + localStorage + Supabase sync), selectors
-  components/  App, Header, ViewToggle, Timeline, Calendar, Map, StoryMode, RecPanel, DayPlanner,
-               DayMap, TripChatPanel (Claus chat + briefing receipt), Tickets, …
-  lib/         dates, ids, thermalReceipt + escpos (ESC/POS receipt), maps
-api/           Vercel functions: trip-chat, extract/match-ticket, morning/welcome-brief,
-               prewarm-briefs, trip-watch, concierge; _lib/ shared Claude + agent clients
-agents/        concierge agent + environment YAML (apply with the `ant` CLI)
-scripts/       devserver.py (local static), printbridge.py (Epson ESC/POS bridge)
+  config.js    Supabase URL + anon key — empty = local only
+  data/        catalog (tiers, durations, places), slots, weather, logistics, pacing, nudges
+  store/       reducer + store (localStorage + Supabase realtime sync)
+  components/  Timeline/Calendar/Map views, StoryMode flyover, TripChatPanel
+               (Claus chat + the briefing receipt), Tickets, DayMap, RecPanel, DayPlanner
+  lib/         dates, ids, thermalReceipt + escpos (renders the brief to ESC/POS), maps
+api/           trip-chat, extract/match-ticket, morning/welcome-brief, prewarm-briefs,
+               trip-watch, concierge; _lib/ shared Claude client + the Managed Agents client
+agents/        concierge agent + environment, as version-controlled YAML
+scripts/       devserver.py (local static server), printbridge.py (Epson ESC/POS bridge)
 ```
 
 ## Content & attribution
 
 City selection and sight priorities follow the well-known Rick Steves 3-week
 Scandinavia itinerary; **all blurbs and picks are original wording.** City cards
-link to the free Rick Steves destination pages, recommendations link to Wikipedia,
-and food places link to their sites or Google Maps. The built-in data is a
-starting point — everything is editable.
+link to the free Rick Steves destination pages, recommendations link to
+Wikipedia. Every stop, item, blurb, tier, and note is editable — the built-in data
+is just a starting point.
