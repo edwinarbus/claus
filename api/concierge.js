@@ -87,7 +87,7 @@ async function handleSetup(req, res) {
     return;
   }
 
-  const environment = await createEnvironment(`scandiplan-concierge-${Date.now()}`);
+  const environment = await createEnvironment(`claus-demo-concierge-${Date.now()}`);
   const store = await createMemoryStore(
     'Claus trip brain',
     'Long-term memory for the Claus Overnight Concierge: Tyler & Edwin\'s confirmed preferences, decisions, and notes across the trip.',
