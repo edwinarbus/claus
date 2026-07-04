@@ -190,7 +190,11 @@ function printBriefing() {
   // explicit computed mm height fixes that everywhere print-to-PDF is used.
   root.style.cssText = 'position:fixed; left:-9999px; top:0; display:block;';
   clone.style.cssText = 'width:72mm; margin:0; padding:0 1mm; border:none; box-shadow:none; font-size:12px;';
-  clone.querySelectorAll('.receipt-screen-only, .receipt-map, .receipt-tear').forEach((el) => { el.style.display = 'none'; });
+  // The day map (and its numbered key) DOES print — a PDF/real printer renders
+  // it fine, unlike raw thermal paper. Only the torn-paper edge (a screen-only
+  // decorative flourish) is hidden. Measuring height with the map visible
+  // means the computed @page size already accounts for its real height below.
+  clone.querySelectorAll('.receipt-tear').forEach((el) => { el.style.display = 'none'; });
   const heightPx = clone.getBoundingClientRect().height;
   const heightMM = Math.max(80, Math.ceil((heightPx / 96) * 25.4) + 12);
   root.removeAttribute('style');

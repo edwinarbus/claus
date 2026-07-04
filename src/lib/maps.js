@@ -16,6 +16,13 @@ export function basemapUrl() {
   return isDark() ? TILE_DARK : TILE_LIGHT;
 }
 
+// Always the light tiles, regardless of the app's theme — for the receipt map,
+// which is a printed/paper artifact (monochrome-filtered on top) and must never
+// follow the device into dark mode the way the interactive map does.
+export function lightBasemapUrl() {
+  return TILE_LIGHT;
+}
+
 /**
  * Keep a Leaflet tile layer's basemap in sync with the active theme. Swaps the
  * URL in place (no re-create) on light⇆dark changes. Returns an unsubscribe.

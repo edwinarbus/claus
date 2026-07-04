@@ -2335,11 +2335,9 @@ html.dark .trip-chat-receipt { --paper: #fdfcf7; color: #17140f; box-shadow: 4px
     --paper: #fff;
     font-size: 12px;
   }
-  /* The interactive/screen bits never print: the day map (mush on thermal —
-     it's not what's on the shelf-life receipt), the paper tear, and any
-     screen-only chrome. */
-  html.receipt-printing #receipt-print-root .receipt-screen-only,
-  html.receipt-printing #receipt-print-root .receipt-map,
+  /* The day map DOES print here — a PDF/real printer renders it fine (only the
+     raw ESC/POS thermal path treats it as mush). Just the paper-tear edge, a
+     screen-only decorative flourish, is hidden. */
   html.receipt-printing #receipt-print-root .receipt-tear { display: none !important; }
 }
 /* NOTE: the 80mm @page rule (sized to the measured content) is injected by
@@ -3140,6 +3138,24 @@ html.dark .trip-chat-md-a {
 }
 html.dark .trip-chat-md-a:hover {
   color: rgba(218, 235, 205, 1);
+}
+/* The receipt is a printed/paper artifact — these dark-mode overrides above
+   have an extra `html` element in their selector, so they'd otherwise beat
+   .receipt-body's own heading/divider/link colors on specificity alone and
+   wash the receipt's headings out to near-white against the paper. Reset
+   them back to ink so the receipt never changes with device theme. */
+html.dark .receipt-body .trip-chat-md-h1,
+html.dark .receipt-body .trip-chat-md-h2,
+html.dark .receipt-body .trip-chat-md-h3,
+html.dark .receipt-body .trip-chat-md-h4 {
+  color: var(--r-ink);
+}
+html.dark .receipt-body .trip-chat-md-hr {
+  border-top-color: color-mix(in srgb, var(--r-ink) 55%, transparent);
+}
+html.dark .receipt-body .trip-chat-md-a,
+html.dark .receipt-body .trip-chat-md-a:hover {
+  color: inherit;
 }
 html.dark .trip-chat-code {
   background: rgba(255, 255, 255, 0.08);

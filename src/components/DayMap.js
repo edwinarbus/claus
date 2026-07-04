@@ -1,6 +1,8 @@
 import { html, useRef, useEffect, useState } from '../html.js';
 import L from 'leaflet';
-import { mapFitPadding, whenMapSized, watchMapResize, basemapUrl, watchBasemapTheme } from '../lib/maps.js';
+import {
+  mapFitPadding, whenMapSized, watchMapResize, basemapUrl, watchBasemapTheme, lightBasemapUrl,
+} from '../lib/maps.js';
 import { useTheme } from '../lib/theme.js';
 import { haversineKm } from '../data/logistics.js';
 import { CITY_TRANSIT, intraCityHop, transitPayShort, rideHailShort } from '../data/cityTransit.js';
@@ -105,7 +107,9 @@ const DAY_VIEW = new Map();
 export function DayMap({ stop, day, receipt = false }) {
   const [open, setOpen] = useState(true);
   const [, , theme] = useTheme();
-  const dark = theme === 'dark';
+  // Receipt is a printed/paper artifact — pins/route always render in their
+  // light-mode colors, never following the device into dark mode.
+  const dark = !receipt && theme === 'dark';
   const points = collectPoints(day);
   const lodging = (day.slots && day.slots.lodging) || null;
   const city = { id: stop.cityId || stop.id, name: stop.name, country: stop.country, lat: stop.lat, lng: stop.lng };
@@ -203,10 +207,12 @@ export function DayMap({ stop, day, receipt = false }) {
       boxZoom: !receipt,
       keyboard: !receipt,
     }).setView([city.lat, city.lng], 12);
-    const tiles = L.tileLayer(basemapUrl(), {
+    // Receipt is a printed/paper artifact — always light tiles, and never
+    // follow the device into dark mode the way the interactive map does.
+    const tiles = L.tileLayer(receipt ? lightBasemapUrl() : basemapUrl(), {
       maxZoom: 19, subdomains: 'abcd',
     }).addTo(map);
-    unwatchThemeRef.current = watchBasemapTheme(tiles);
+    if (!receipt) unwatchThemeRef.current = watchBasemapTheme(tiles);
     layerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
     // Restore the last view for this day (panel reopen, or a re-expanded stop)
