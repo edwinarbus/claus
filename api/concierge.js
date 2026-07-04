@@ -99,10 +99,10 @@ async function handleSetup(req, res) {
   const agent = await createAgent({
     name: 'Claus Overnight Concierge',
     model: 'claude-sonnet-5',
-    // Prompt caching: the (large, stable) report template is one ephemeral
-    // cache block, so every nightly run re-reads it from cache. system takes the
-    // Messages API blocks form for exactly this.
-    system: [{ type: 'text', text: AGENT_SYSTEM, cache_control: { type: 'ephemeral' } }],
+    // Managed Agents' system prompt is a plain string (unlike the Messages API,
+    // it has no content-blocks/cache_control form) — sessions get prompt
+    // caching automatically, so there's nothing to opt into here.
+    system: AGENT_SYSTEM,
     tools: [{ type: 'agent_toolset_20260401' }, READ_TRIP_STATE_TOOL],
   });
 
