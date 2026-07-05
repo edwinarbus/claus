@@ -77,6 +77,15 @@ function getDeploymentRun(runId) {
   return json(`/deployment_runs/${encodeURIComponent(runId)}`);
 }
 
+// List a deployment's runs, newest-first. Each run carries the created
+// `session_id` (on success) or an `error.type` (on failure). Used by the app's
+// self-heal read path to find the most recent run when a webhook was missed.
+function listDeploymentRuns(deploymentId, { limit = 10 } = {}) {
+  return json('/deployment_runs', {
+    query: { deployment_id: deploymentId, limit: String(limit) },
+  });
+}
+
 // Session details, including the resolved `agent` config — used to verify a
 // webhook-delivered session actually belongs to THIS app's own agent before
 // servicing/harvesting it (see the ownership check in concierge.js: session
@@ -166,6 +175,7 @@ module.exports = {
   createMemory,
   createDeployment,
   getDeploymentRun,
+  listDeploymentRuns,
   createDeploymentRun,
   getSession,
   listSessionEvents,
