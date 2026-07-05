@@ -23,7 +23,7 @@ const { fetchTrip, todayISO } = require('./_lib/brief.js');
 const { apiKey } = require('./_lib/claus-anthropic.js');
 const {
   createEnvironment, createAgent, createMemoryStore, createMemory, createDeployment,
-  createDeploymentRun, getDeploymentRun, getSession,
+  createDeploymentRun, getDeploymentRun, listDeploymentRuns, getSession,
   listSessionEvents, sendSessionEvents, listSessionFiles, downloadFileText, verifyWebhook,
 } = require('./_lib/anthropic-agents.js');
 
@@ -224,9 +224,13 @@ async function pushToSubscribers(notification) {
 
 // Harvest the concierge.json the agent wrote to /mnt/session/outputs, store it,
 // and notify. Deduped per session so repeated idle webhooks don't re-push.
-async function harvestSession(sessionId, { notify = true } = {}) {
+async function harvestSession(sessionId, { notify = true, trusted = false } = {}) {
   const state = await loadTripState();
-  if (!(await ensureOwnSession(sessionId, state))) return { note: 'not our session' };
+  // `trusted` skips the per-session ownership check — used by the sync path and
+  // the deployment_run backstop, where the session was found under OUR
+  // deployment's runs (so it's provably ours even if the agent id has since
+  // drifted, e.g. a re-setup).
+  if (!trusted && !(await ensureOwnSession(sessionId, state))) return { note: 'not our session' };
   const processed = state.concierge?.processed || {};
   if (processed[sessionId]) return { note: 'already processed', done: true };
 
@@ -303,9 +307,9 @@ async function handleWebhook(req, res) {
     auth: verified ? 'hmac' : 'token',
   }).slice(0, 400));
 
-  // Everything is driven off session idle transitions; deployment_run.* events
-  // are acknowledged (the session's own idle event carries the work). Match both
-  // session.status_idle and .status_idled to be safe.
+  // The primary trigger is a session idle transition (the terminal idle carries
+  // the finished brief). deployment_run.* events are a BACKSTOP below, for when
+  // that idle event is missed. Match both session.status_idle and .status_idled.
   if (/^session\.status_idle/.test(eventType) && sessionId) {
     // Session webhooks fire workspace-wide, not just for the endpoint that
     // registered them — any other app sharing this Anthropic workspace will
@@ -327,6 +331,31 @@ async function handleWebhook(req, res) {
     return;
   }
 
+  // Backstop: harvest on deployment_run.* too, so a completed run still lands
+  // even if its session's own idle event never arrived. The run event carries
+  // the RUN id in data.id (drun_…), so resolve its session first. A run still in
+  // flight just yields "no concierge.json yet" — a harmless no-op that isn't
+  // marked processed, so a later run event (or the load-time sync) retries. A run
+  // under OUR deployment is provably ours, so harvest it trusted (robust to an
+  // agent-id change from a re-setup); otherwise fall back to the per-session
+  // ownership check, since these events fire workspace-wide.
+  if (/^deployment_run\./.test(eventType)) {
+    const runId = data.id || data.run_id;
+    const run = runId ? await getDeploymentRun(runId).catch(() => null) : null;
+    const runSessionId = data.session_id || data.session?.id
+      || (run && (run.session_id || run.session?.id)) || null;
+    if (!runSessionId) { res.status(200).json({ status: 'ok', note: 'run pending' }); return; }
+    const state = await loadTripState();
+    const ours = !!(run && run.deployment_id && run.deployment_id === state.concierge?.deploymentId);
+    const events = (await listSessionEvents(runSessionId).catch(() => ({ data: [] }))).data || [];
+    const serviced = await serviceTripStateTool(runSessionId, events, state);
+    if (serviced > 0) { res.status(200).json({ status: 'ok', serviced }); return; }
+    const harvest = await harvestSession(runSessionId, { trusted: ours });
+    console.log('[concierge] run-harvest', runSessionId, ours ? 'ours' : 'check', JSON.stringify(harvest).slice(0, 160));
+    res.status(200).json({ status: 'ok', ...harvest });
+    return;
+  }
+
   console.log('[concierge] ignored', eventType);
   res.status(200).json({ status: 'ok', ignored: eventType || 'unknown' });
 }
@@ -337,6 +366,42 @@ async function handleLatest(req, res) {
   const latest = (state.concierge && state.concierge.latest) || null;
   res.setHeader('Cache-Control', 'no-store');
   res.status(200).json({ latest });
+}
+
+// GET ?sync=1 — the app's self-heal. The nightly webhook is best-effort (it can
+// miss a run, or fire before the brief is written), which strands the stored
+// `latest` on an older day. This looks up the deployment's most recent run
+// directly, harvests its brief, and returns the freshest `latest` — so the
+// on-screen receipt always catches up to the latest completed run even when no
+// webhook ever arrived. Best-effort: any failure just returns what's stored.
+async function handleSyncLatest(req, res) {
+  res.setHeader('Cache-Control', 'no-store');
+  const state = await loadTripState();
+  const stored = (state.concierge && state.concierge.latest) || null;
+  const deploymentId = state.concierge && state.concierge.deploymentId;
+  if (!apiKey() || !deploymentId) { res.status(200).json({ latest: stored }); return; }
+
+  try {
+    const runs = await listDeploymentRuns(deploymentId, { limit: 10 });
+    const list = Array.isArray(runs && runs.data) ? runs.data : [];
+    // Newest-first — take the most recent run that actually started a session
+    // (failed runs carry an error.type and no session_id).
+    const run = list.find((r) => r && (r.session_id || (r.session && r.session.id)));
+    const sessionId = run && (run.session_id || (run.session && run.session.id));
+    // Skip the harvest round-trip when the newest run is already the stored one.
+    if (sessionId && sessionId !== (stored && stored.sessionId)) {
+      const harvest = await harvestSession(sessionId, { notify: false, trusted: true }).catch((e) => {
+        console.warn('[concierge] sync harvest failed:', String(e && e.message).slice(0, 160));
+        return null;
+      });
+      console.log('[concierge] sync', sessionId, JSON.stringify(harvest || {}).slice(0, 160));
+    }
+  } catch (e) {
+    console.warn('[concierge] sync failed:', String(e && e.message).slice(0, 160));
+  }
+
+  const fresh = await loadTripState();
+  res.status(200).json({ latest: (fresh.concierge && fresh.concierge.latest) || stored });
 }
 
 // ==== on-demand run ("Run briefing agent again") ============================
@@ -448,6 +513,7 @@ module.exports = async (req, res) => {
   try {
     if (req.method === 'GET') {
       if (req.query && req.query.poll) { await handlePoll(req, res); return; }
+      if (req.query && req.query.sync) { await handleSyncLatest(req, res); return; }
       await handleLatest(req, res);
       return;
     }

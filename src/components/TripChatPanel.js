@@ -17,7 +17,7 @@ import { BlockSpinner } from './BlockSpinner.js';
 import { ActivitySection } from './TripChatActivity.js';
 import { DayMap } from './DayMap.js';
 import { findDayOnTrip } from '../lib/tripDay.js';
-import { daysBetween } from '../lib/dates.js';
+import { daysBetween, todayISO } from '../lib/dates.js';
 import { resolveItemCoords } from './useDayGeo.js';
 import { renderReceiptCanvas } from '../lib/thermalReceipt.js';
 import { canvasToEscpos } from '../lib/escpos.js';
@@ -739,6 +739,13 @@ export function TripChatPanel({ open, onClose, onEnsureTimeline, onEnsureOpen })
           // earlier concierge card before surfacing this one.
           setMessages((prev) => [conciergeMsg, ...prev.filter((m) => !m.concierge)]);
         }, 250);
+        // If what we surfaced is stale — the local fallback, or a managed brief
+        // whose day is already behind today (an overnight run the webhook never
+        // harvested) — pull the deployment's latest run in the background and
+        // swap the fresher brief into the receipt when it lands.
+        if (latest.local || String(latest.date || '') < todayISO()) {
+          syncLatestRun(Number(latest.at) || 0, () => cancelled);
+        }
       } catch { /* best-effort — the concierge brief is optional */ }
     })();
     return () => { cancelled = true; };
@@ -1134,6 +1141,27 @@ export function TripChatPanel({ open, onClose, onEnsureTimeline, onEnsureOpen })
       conciergeTyping: true,
       conciergeSuggestions: Array.isArray(latest.suggestions) ? latest.suggestions : [],
     } : m)));
+  }
+
+  // Self-heal delivery of the latest run's brief. The nightly webhook is
+  // best-effort, so on load we ask the server to harvest the deployment's most
+  // recent run directly (?sync=1). If that yields a brief newer than the one we
+  // surfaced — a stranded overnight run the webhook missed, or the local
+  // fallback — swap it into the receipt, and, like a fresh nightly run, open the
+  // panel when it's genuinely new.
+  async function syncLatestRun(shownAt, isCancelled) {
+    let fresh = null;
+    try {
+      const res = await fetch('/api/concierge?sync=1', { headers: { accept: 'application/json' } });
+      if (!res.ok) return;
+      const data = await res.json().catch(() => null);
+      fresh = data && data.latest;
+    } catch { return; /* best-effort — self-heal is optional */ }
+    if (!fresh || !fresh.brief) return;
+    if (isCancelled && isCancelled()) return;
+    if (Number(fresh.at) <= Number(shownAt || 0)) return; // nothing newer than what's shown
+    if (Number(fresh.at) > loadConciergeSeen(TRIP_ID)) onEnsureOpen?.();
+    replaceConciergeBrief(fresh);
   }
 
   function pollConciergeRun(runId, sessionId, attempt) {
