@@ -48,6 +48,15 @@ headlines instead of keyword-matching them; recommendations are tiered (must-see
 must-do / must-eat) with time estimates and, for local food, the top few places to
 get it.
 
+## Claude API surface
+
+| Feature | API surface |
+|---|---|
+| **The Overnight Concierge** — [`api/concierge.js`](api/concierge.js), [`api/_lib/anthropic-agents.js`](api/_lib/anthropic-agents.js) | **Managed Agents**, in full: a persisted, versioned **Agent** (model + system prompt + tools) inside a **cloud Environment**; a **scheduled Deployment** (cron) firing a fresh **session** every night; a workspace **Memory Store** the agent reads and writes at `/mnt/memory` to carry preferences forward night over night; a custom `read_trip_state` **tool** the app services live, so Supabase credentials never enter the agent's container; the **Files API** for the brief the agent writes; **HMAC-verified webhooks** (`session.status_idled`, `deployment_run.*`) that harvest the finished brief the instant the session goes idle — and set the automatic print in motion |
+| Claus chat — [`api/trip-chat.js`](api/trip-chat.js) | Streaming `messages.create`; **adaptive thinking** (`thinking: {type:"adaptive", display:"summarized"}`, `output_config.effort:"low"`) streamed live as a reasoning summary; server-side **web search** (`web_search_20260318`, `user_location` biased to the current city) + **web fetch** (`web_fetch_20260209`) with **citations** rolled into an auto-appended Sources list; **prompt caching** (`cache_control: ephemeral`) on the itinerary system block so repeat turns on the same plan are served from cache; **tool use** — a `propose_trip_edits` tool streams structured itinerary edits as they generate |
+| Ticket / reservation reading — [`api/extract-ticket.js`](api/extract-ticket.js), [`api/match-ticket.js`](api/match-ticket.js) | **Vision** (`image` block) and native **PDF document input** (`document` block, base64); strict **structured outputs** (`output_config.format: json_schema`) for typed fields |
+| Disruption alerts — [`api/_lib/classify-alerts.js`](api/_lib/classify-alerts.js) | A structured-output relevance classifier ranks real headlines instead of keyword-matching |
+
 ## Stack
 
 - Plain **ES modules** — React 18 + htm (JSX-like templates, no transpiler) +
@@ -61,19 +70,6 @@ get it.
   every Claude call, ticket parsing, and the concierge webhook.
 - **`scripts/printbridge.py`** — a tiny stdlib-only local relay that turns
   browser-rendered ESC/POS bytes into real thermal-printer output over USB or TCP.
-
-## Claude API surface
-
-Every AI feature is the **Anthropic Messages API** on **Claude Sonnet 5**, called
-with raw `fetch` from `api/` — jittered retries on 429/5xx/overloaded, and every
-call checks `stop_reason` explicitly rather than assuming success.
-
-| Feature | API surface |
-|---|---|
-| **The Overnight Concierge** — [`api/concierge.js`](api/concierge.js), [`api/_lib/anthropic-agents.js`](api/_lib/anthropic-agents.js) | **Managed Agents**, in full: a persisted, versioned **Agent** (model + system prompt + tools) inside a **cloud Environment**; a **scheduled Deployment** (cron) firing a fresh **session** every night; a workspace **Memory Store** the agent reads and writes at `/mnt/memory` to carry preferences forward night over night; a custom `read_trip_state` **tool** the app services live, so Supabase credentials never enter the agent's container; the **Files API** for the brief the agent writes; **HMAC-verified webhooks** (`session.status_idled`, `deployment_run.*`) that harvest the finished brief the instant the session goes idle — and set the automatic print in motion |
-| Claus chat — [`api/trip-chat.js`](api/trip-chat.js) | Streaming `messages.create`; **adaptive thinking** (`thinking: {type:"adaptive", display:"summarized"}`, `output_config.effort:"low"`) streamed live as a reasoning summary; server-side **web search** (`web_search_20260318`, `user_location` biased to the current city) + **web fetch** (`web_fetch_20260209`) with **citations** rolled into an auto-appended Sources list; **prompt caching** (`cache_control: ephemeral`) on the itinerary system block so repeat turns on the same plan are served from cache; **tool use** — a `propose_trip_edits` tool streams structured itinerary edits as they generate |
-| Ticket / reservation reading — [`api/extract-ticket.js`](api/extract-ticket.js), [`api/match-ticket.js`](api/match-ticket.js) | **Vision** (`image` block) and native **PDF document input** (`document` block, base64); strict **structured outputs** (`output_config.format: json_schema`) for typed fields |
-| Disruption alerts — [`api/_lib/classify-alerts.js`](api/_lib/classify-alerts.js) | A structured-output relevance classifier ranks real headlines instead of keyword-matching |
 
 ## Quick start
 
