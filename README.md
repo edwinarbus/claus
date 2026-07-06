@@ -19,14 +19,9 @@ disruptions, catches local events with real web search — and remembers what yo
 like from a durable memory store that grows a little sharper every night. Then the
 part that feels like magic: the finished brief renders itself as an 80mm thermal
 receipt and **prints — for real, on a physical Epson receipt printer — entirely on
-its own.** No button, no phone, no notification to tap. You just walk over in the
-morning and there's a small paper slip already waiting, like a hotel concierge
-slid it under your door while you slept: the weather, the plan, a couple of
-handy local-language phrases for wherever you're headed that day. A tiny,
-disposable, delightfully analog daily briefing that exists purely because an
-agent did its job overnight.
+its own.**
 
-**Claus chat (Claude Sonnet 5).** One text box, streamed. Ask it to rework a day
+**Claus chat (Claude Sonnet 5).**  Ask it to rework a day
 and it searches the live web, reasons out loud via **adaptive thinking**, and —
 when asked — actually edits the plan itself: it dispatches real changes straight
 into the shared itinerary (move a stop, swap a slot, update a transport leg,
