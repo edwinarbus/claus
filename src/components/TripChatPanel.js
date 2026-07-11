@@ -417,6 +417,16 @@ function animateSuggestionFly(from, clone, bubbleEl) {
   }, DUR + 120);
 }
 
+// Chip text is short by prompt design, but agent output isn't guaranteed —
+// clip at a word boundary near `max` chars so a stray long title still fits
+// the two-line chip instead of relying on CSS line-clamp to hard-cut it.
+function truncateChipTitle(text, max = 42) {
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max);
+  const lastSpace = cut.lastIndexOf(' ');
+  return `${(lastSpace > 20 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
+}
+
 // One horizontally-scrolling row of suggestion pills. Auto-scrolls via scrollLeft
 // (so the user can also swipe/drag/wheel through it), pauses while the pointer is
 // over it, and loops seamlessly because the items are rendered twice. direction:
@@ -487,11 +497,12 @@ function MarqueeRow({ items, direction, loading, onPick, onChipPointerDown }) {
       <div class="trip-chat-marquee-track">
         ${Array.from({ length: copies }, () => items).flat().map((q, i) => html`<button key=${i} type="button"
           disabled=${loading}
+          title=${q}
           onClick=${(e) => onPick(q, e)}
           onPointerDown=${onChipPointerDown}
           aria-hidden=${i >= items.length ? 'true' : undefined}
           tabindex=${i >= items.length ? -1 : undefined}
-          class="trip-chat-chip"><span class="trip-chat-chip-text">${q}</span></button>`)}
+          class="trip-chat-chip"><span class="trip-chat-chip-text">${truncateChipTitle(q)}</span></button>`)}
       </div>
     </div>`;
 }
