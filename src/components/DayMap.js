@@ -294,7 +294,15 @@ export function DayMap({ stop, day, receipt = false }) {
       bounds.push([lodgeLoc.c.lat, lodgeLoc.c.lng]);
     }
     fitRef.current = bounds;
-    if (!didFitRef.current) {
+    if (receipt) {
+      // A receipt map is a static snapshot with no user pan/zoom to preserve —
+      // re-fit on EVERY redraw. Locking the frame after the first settled fit
+      // (like the interactive map below) strands late-arriving coordinates
+      // outside the frame: a slow wiki lookup can upgrade a city-center guess
+      // to a spot far from the others after the lock, leaving its pin and the
+      // route to it cropped off the edge of the receipt.
+      fitDayBounds(bounds, allResolved);
+    } else if (!didFitRef.current) {
       // First framing of this day: fit as pins stream in (invisibly), then
       // reveal once everything has resolved so load shows a settled map.
       fitDayBounds(bounds, allResolved);
