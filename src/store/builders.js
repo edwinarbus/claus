@@ -1,6 +1,6 @@
 // Pure factory helpers for building trip/stop/day/item objects.
 import { uid } from '../lib/ids.js';
-import { addDays, eachDate, nightsBetween } from '../lib/dates.js';
+import { addDays, eachDate, nightsBetween, todayISO } from '../lib/dates.js';
 import { CITIES, DEFAULT_ROUTE, CATALOG_ITEM_INDEX } from '../data/catalog.js';
 import { patchKnownLodgingItem } from '../data/knownPlaces.js';
 import { emptySlots } from '../data/slots.js';
@@ -162,9 +162,9 @@ export function buildDaysForCity(cityId, startISO, endISO, prevDays = []) {
   return kept.map((d, i) => (i < firstNew ? d : { ...d, slots: plans[i] || emptySlots() }));
 }
 
-// Demo: bumped to v3 so an already-seeded browser (older date, no hotels)
-// re-seeds fresh — the fixed Jul 2 - Jul 11 route + the real booked hotels.
-export const STORAGE_KEY = 'claus-demo:v3';
+// Demo: bumped to v4 so an already-seeded browser (old fixed Jul 2 - Jul 11
+// dates) re-seeds fresh — the route re-anchored to start today + booked hotels.
+export const STORAGE_KEY = 'claus-demo:v4';
 export const SCHEMA_VERSION = 15;
 
 // Turn a catalog item (or any item-shaped object) into a fresh placeable instance.
@@ -289,12 +289,16 @@ export function makeCustomStop({ name, country = '', lat = 60, lng = 12, blurb =
 }
 
 export function initialTrip() {
+  // Fallback bounds only — the demo seed (store.js) immediately loads the
+  // default route starting today, which re-derives both dates. 9 nights
+  // matches the default route's total.
+  const start = todayISO();
   return {
     id: uid('trip'),
     name: 'Claus',
     version: SCHEMA_VERSION,
-    startDate: '2026-07-02',
-    endDate: '2026-07-11',
+    startDate: start,
+    endDate: addDays(start, 9),
     stops: [],
     arrival: { mode: 'flight', from: 'YYZ (Toronto)', note: '' },
     departure: { mode: 'flight', to: 'SFO (San Francisco)', note: '' },

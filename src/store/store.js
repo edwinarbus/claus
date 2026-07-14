@@ -277,10 +277,10 @@ export function TripProvider({ children }) {
   const [trip, rawDispatch] = useReducer(reducer, undefined, () => {
     const saved = loadState();
     if (saved) return migrate(saved) || initialTrip();
-    // DEMO: no saved trip yet → seed the curated route on its fixed dates, so a
-    // fresh browser opens straight into a full itinerary (no backend, no empty
-    // state). Reuses the exact "Load default route" reducer path.
-    return withDemoHotels(reducer(initialTrip(), { type: 'LOAD_DEFAULT_ROUTE', startDate: '2026-07-02' }));
+    // DEMO: no saved trip yet → seed the curated route starting TODAY, so a
+    // fresh browser opens straight into a live, in-progress itinerary (no
+    // backend, no empty state). Reuses the exact "Load default route" path.
+    return withDemoHotels(reducer(initialTrip(), { type: 'LOAD_DEFAULT_ROUTE', startDate: todayISO() }));
   });
   const tripRef = useRef(trip);
   tripRef.current = trip;
