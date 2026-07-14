@@ -10,15 +10,15 @@ import sys
 import json
 import time
 import urllib.parse
-from datetime import date, timedelta
+from datetime import date
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 # Manual-run id -> start time, so poll() can stream steps that progress over time.
 _RUNS = {}
 
-# Demo: the seeded trip starts TOMORROW, so date the mock brief to day 1
+# Demo: the seeded trip starts TODAY, so date the mock brief to day 1
 # (Copenhagen) — keeping the receipt, its map, and the phrases all consistent.
-_DAY1 = date.today() + timedelta(days=1)
+_DAY1 = date.today()
 _DAY1_HDR = f"### COPENHAGEN — {_DAY1.strftime('%a').upper()}, {_DAY1.strftime('%b').upper()} {_DAY1.day}\n"
 
 _SUGGESTIONS = [

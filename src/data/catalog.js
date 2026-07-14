@@ -17,8 +17,7 @@ import { LODGING_BY_CITY, EXTRA_ITEMS_BY_CITY, HEAT_REASON_DEFAULTS, MORE_SUGGES
 // Tiers: 1 = unmissable · 2 = high value if you have time · 3 = nice extra.
 
 // The classic loop, south -> north, ending on the fjords. Trimmed to a
-// 4-stop, 9-night demo trip (Jul 2 -> Jul 11) — see src/store/store.js for
-// the fixed seed date this pairs with.
+// 4-stop, 9-night demo trip — seeded to start today (see src/store/store.js).
 export const DEFAULT_ROUTE = [
   { city: 'copenhagen', nights: 3, transportToNext: { mode: 'train', note: 'direct intercity train', durationMin: 210 } },
   { city: 'aarhus', nights: 2, transportToNext: { mode: 'train', note: 'train via Odense, then the Ærø ferry', durationMin: 300 } },

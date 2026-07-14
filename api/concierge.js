@@ -20,6 +20,7 @@ const { SUPABASE_URL, SUPABASE_ANON_KEY, TRIP_ID, VAPID_PRIVATE_KEY } = require(
 const { sendPush } = require('./_lib/webpush.js');
 const { loadTripState, saveTripState, isPushRow } = require('./_lib/state.js');
 const { fetchTrip, todayISO } = require('./_lib/brief.js');
+const { rebaseTripToToday, saveTrip } = require('./_lib/trip-rebase.js');
 const { apiKey } = require('./_lib/claus-anthropic.js');
 const {
   createEnvironment, createAgent, createMemoryStore, createMemory, createDeployment,
@@ -176,6 +177,20 @@ async function ensureOwnSession(sessionId, state) {
   return !!session && session.agent?.id === ourAgentId;
 }
 
+// The shared demo trip is date-pinned; if it has already ended, slide the whole
+// timeline forward so it starts today and persist the slide — the nightly agent
+// keeps briefing real upcoming days instead of a finished trip.
+async function fetchCurrentTrip() {
+  const trip = await fetchTrip().catch(() => null);
+  const rebased = rebaseTripToToday(trip, todayISO());
+  if (!rebased) return trip;
+  await saveTrip(rebased).catch((e) => {
+    console.warn('[concierge] trip rebase save failed:', String(e && e.message).slice(0, 160));
+  });
+  console.log('[concierge] trip rebased to start', rebased.startDate);
+  return rebased;
+}
+
 async function serviceTripStateTool(sessionId, events, state) {
   const resultFor = new Set(
     events.filter((e) => e?.type === 'user.custom_tool_result')
@@ -187,7 +202,7 @@ async function serviceTripStateTool(sessionId, events, state) {
   if (!pending.length) return 0;
   if (!(await ensureOwnSession(sessionId, state))) return 0;
 
-  const trip = await fetchTrip().catch(() => null);
+  const trip = await fetchCurrentTrip();
   const payload = JSON.stringify({ todayISO: todayISO(), trip: trip || {} }).slice(0, 200000);
   for (const call of pending) {
     await sendSessionEvents(sessionId, [{
@@ -376,6 +391,10 @@ async function handleLatest(req, res) {
 // webhook ever arrived. Best-effort: any failure just returns what's stored.
 async function handleSyncLatest(req, res) {
   res.setHeader('Cache-Control', 'no-store');
+  // Self-heal the shared trip's dates too: opening the app after the trip's
+  // end date slides the whole timeline forward to start today, so the next
+  // agent run (nightly or manual) briefs real days again.
+  await fetchCurrentTrip().catch(() => null);
   const state = await loadTripState();
   const stored = (state.concierge && state.concierge.latest) || null;
   const deploymentId = state.concierge && state.concierge.deploymentId;
