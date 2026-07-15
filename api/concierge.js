@@ -237,9 +237,26 @@ async function pushToSubscribers(notification) {
   return { sent, pruned: gone.length };
 }
 
+// Cap `text` at `max` chars without ever cutting mid-line/mid-word — back up to
+// the last full line inside the limit (a receipt reads as complete sections;
+// a fragment like "Glyptotek is mid-ren…" left dangling looks broken, not
+// trimmed). Falls back to the hard cut only if there's no earlier line break
+// to back up to.
+function truncateAtLine(text, max) {
+  const t = String(text || '');
+  if (t.length <= max) return t;
+  const cut = t.slice(0, max);
+  const lastBreak = cut.lastIndexOf('\n');
+  return (lastBreak > max * 0.5 ? cut.slice(0, lastBreak) : cut).trimEnd();
+}
+
 // Harvest the concierge.json the agent wrote to /mnt/session/outputs, store it,
 // and notify. Deduped per session so repeated idle webhooks don't re-push.
-async function harvestSession(sessionId, { notify = true, trusted = false } = {}) {
+// `force` re-derives `latest` from a session already marked processed — used
+// by the resync endpoint to re-apply fixed parsing/formatting logic (e.g. a
+// truncation-cap fix) to the current brief without spending a fresh agent run;
+// the source file on Anthropic's side is untouched, so this is a pure re-read.
+async function harvestSession(sessionId, { notify = true, trusted = false, force = false } = {}) {
   const state = await loadTripState();
   // `trusted` skips the per-session ownership check — used by the sync path and
   // the deployment_run backstop, where the session was found under OUR
@@ -247,7 +264,7 @@ async function harvestSession(sessionId, { notify = true, trusted = false } = {}
   // drifted, e.g. a re-setup).
   if (!trusted && !(await ensureOwnSession(sessionId, state))) return { note: 'not our session' };
   const processed = state.concierge?.processed || {};
-  if (processed[sessionId]) return { note: 'already processed', done: true };
+  if (processed[sessionId] && !force) return { note: 'already processed', done: true };
 
   let files;
   try { files = await listSessionFiles(sessionId); } catch (e) {
@@ -263,7 +280,7 @@ async function harvestSession(sessionId, { notify = true, trusted = false } = {}
   const latest = {
     date: String(parsed.date || todayISO()),
     splash: String(parsed.splash || '').slice(0, 240),
-    brief: String(parsed.brief).slice(0, 1200),
+    brief: truncateAtLine(parsed.brief, 2400),
     suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions.slice(0, 8) : [],
     sessionId,
     at: Date.now(),
@@ -381,6 +398,22 @@ async function handleLatest(req, res) {
   const latest = (state.concierge && state.concierge.latest) || null;
   res.setHeader('Cache-Control', 'no-store');
   res.status(200).json({ latest });
+}
+
+// GET ?resync=1 — re-derive `latest` from the CURRENTLY stored session's own
+// concierge.json, ignoring the processed-cache. The source file lives on
+// Anthropic's side and is never touched by our own storage step, so this is a
+// safe, content-free re-read: useful for re-applying a parsing/formatting fix
+// (e.g. a truncation cap) to the on-screen brief without spending a fresh
+// agent run. `trusted: true` is fine here — sessionId comes from our own
+// already-harvested `latest`, not the request.
+async function handleResync(req, res) {
+  res.setHeader('Cache-Control', 'no-store');
+  const state = await loadTripState();
+  const sessionId = state.concierge?.latest?.sessionId;
+  if (!sessionId) { res.status(409).json({ status: 'error', message: 'no_latest' }); return; }
+  const harvest = await harvestSession(sessionId, { notify: false, trusted: true, force: true });
+  res.status(200).json({ status: 'ok', ...harvest });
 }
 
 // GET ?sync=1 — the app's self-heal. The nightly webhook is best-effort (it can
@@ -533,6 +566,7 @@ module.exports = async (req, res) => {
     if (req.method === 'GET') {
       if (req.query && req.query.poll) { await handlePoll(req, res); return; }
       if (req.query && req.query.sync) { await handleSyncLatest(req, res); return; }
+      if (req.query && req.query.resync) { await handleResync(req, res); return; }
       await handleLatest(req, res);
       return;
     }
